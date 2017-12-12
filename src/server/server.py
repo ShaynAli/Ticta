@@ -19,9 +19,9 @@ class Server(Thread):
     def turn(self, turn):
         for i in range(0, len(self.connections)-1):
             if i == turn:
-                self.connections[i].send('Turn'.encode())
+                self.connections[i].send('turn'.encode())
             else:
-                self.connections[i].send('Wait'.encode())
+                self.connections[i].send('wait'.encode())
         data = self.connections[turn].recv(2048)
         print(data.decode())
         for i in range(0, len(self.connections)-1):

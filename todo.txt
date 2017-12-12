@@ -17,7 +17,7 @@ Client
 
 Needs to message the server and should do so using the following protocol
 Client to Server
-    type of message: move
+    type of message: move, resign
     column number,
     row number
 
@@ -33,7 +33,7 @@ Server to interface - String:
     diagonal number
 
 Server to client
-    message type: move, win, draw
+    message type: move, win, draw, turn, wait
     if move:
         Player symbol followed by,
         column number,
