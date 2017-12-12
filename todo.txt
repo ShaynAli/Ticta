@@ -25,6 +25,7 @@ Client to Server
 Server
 
 Needs to message client and interface and should do so using the following protocol
+
 messages:
 Server to interface - String:
     Player number followed by,

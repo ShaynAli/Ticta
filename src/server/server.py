@@ -2,7 +2,7 @@
 import socket
 from threading import Thread
 
-from src.server import interaface
+from src.game import interaface
 
 
 class Server(Thread):
