@@ -1,21 +1,17 @@
 ''' server.py - Deals with a game server '''
 import socket
 from threading import Thread
-from ..client.factories import ClientFactory
+from src.client.factories import ClientFactory
 import sys
 
 
-IP = '127.0.0.1'
-port = 2020
+class Server:
 
-
-class Server(Thread):
-
-    def __init__(self):
+    def __init__(self, ip, port):
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket.bind((IP, port))
+        self.server_socket.bind((ip, port))
+        self.server_socket.listen(20)
         self.clients = []
-        self.wait_for_connection()
 
     def wait_for_connection(self):
         while True:
@@ -23,19 +19,37 @@ class Server(Thread):
             self.clients.append(ClientFactory.ClientFactory.create_client(connection_socket, address))
 
     def terminator(self):
+
         for client in self.clients:
             client.terminator()
 
 
-server = Server()
-print('Server Online, type help for commands')
-while True:
-    message = input()
-    if message == 'help':
-        print('')
-    if message == 'exit':
-        server.terminator()
-        sys.exit()
-    else:
-        print('Not a valid command')
+class ServerConsole:
+
+    def __init__(self):
+        self.server = Server('127.0.0.1', 3030)
+        self.wait_thread = Thread(target=self.server.wait_for_connection)
+
+    def start_server(self):
+        self.wait_thread.start()
+
+    def console(self):
+        self.start_server()
+        print('Server Online, type help for commands')
+        while True:
+            message = input('>')
+            if message == 'help':
+                print('')
+            elif message == 'exit':
+                self.wait_thread.
+                sys.exit()
+            else:
+                print('Not a valid command')
+
+if __name__ == '__main__':
+    console = ServerConsole()
+    console_thread = Thread(target=console.console)
+    console_thread.start()
+    console_thread.join()
+
 

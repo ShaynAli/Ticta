@@ -1,4 +1,4 @@
-from ...client import client
+from src.client import client
 
 
 class ClientFactory:
