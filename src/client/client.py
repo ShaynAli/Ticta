@@ -34,8 +34,8 @@ while data != 'end':
         break
 
     data = client.recv(BUFFER_SIZE)
-    data = client.recv(BUFFER_SIZE)
     print("Opponent move:", data.decode())
+    data = client.recv(BUFFER_SIZE)
 
 
 client.close()

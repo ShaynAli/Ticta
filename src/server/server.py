@@ -3,7 +3,7 @@ import socket
 from threading import Thread
 
 
-class Server(Thread):
+class Client(Thread):
     def __init__(self, connections):
         Thread.__init__(self)
         self.connections = connections
@@ -45,13 +45,14 @@ while True:
     server.listen()
     print("Waiting for connections...")
     (conn, (ip, port)) = server.accept()
+    print(port)
     connections.append(conn)
 
     if len(connections) == 1:
         conn.send('Waiting for player to match'.encode())
 
     if len(connections) == 2:
-        newthread = Server(connections)
+        newthread = Client(connections)
         newthread.start()
 
         emptyArr = []
