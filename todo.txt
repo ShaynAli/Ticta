@@ -1,9 +1,45 @@
 Game
+-Game needs a way to receive player moves from the server, added interface class to connect the server and the game class,
+this will the move from the server and the player whos turn it is and compute the logic, basically a wrapper for the game.
+The game will need to be reworked in a way so that the interface can send the turns to it without the need to input from the
+console. The messages will be passed from the interface to the server in the following way:
+
+Interface to Server - String:
+    1 for success, 0 for failure, 2 for game end, 3 for anything else think error followed by a space,
+    if the game has ended the next word will be win or draw followed by a space then if win,
+     the number of the player who won (if a then 0, b = 1, Z = 51) lastly,
+     column, row or diagonal and the number of the column or row or 0 for \ and 1 for / or simply timeout if player ran out of time
+
 
 
 Client
+-Needs a front end
+
+Needs to message the server and should do so using the following protocol
+Client to Server
+    type of message: move, resign
+    column number,
+    row number
 
 
 Server
 
+Needs to message client and interface and should do so using the following protocol
 
+messages:
+Server to interface - String:
+    Player number followed by,
+    column number then,
+    diagonal number
+
+Server to client
+    message type: move, win, draw, turn, wait
+    if move:
+        Player symbol followed by,
+        column number,
+        row number
+    if win:
+        Player symbol followed by,
+        column, row or diagonal
+        number of previous
+    if draw:
