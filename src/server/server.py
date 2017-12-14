@@ -16,10 +16,12 @@ class Server:
     def wait_for_connection(self):
         while True:
             connection_socket, address = self.server_socket.accept()
-            self.clients.append(ClientFactory.ClientFactory.create_client(connection_socket, address))
+            self.add_client(connection_socket, address)
+
+    def add_client(self, connection_socket, address):
+        self.clients.append(ClientFactory.ClientFactory.create_client(connection_socket, address))
 
     def terminator(self):
-
         for client in self.clients:
             client.terminator()
 
@@ -41,7 +43,6 @@ class ServerConsole:
             if message == 'help':
                 print('')
             elif message == 'exit':
-                self.wait_thread.
                 sys.exit()
             else:
                 print('Not a valid command')
