@@ -23,9 +23,18 @@ class TicTacToe:
         '''
         if len(players) > TicTacToe.max_players():
             raise RuntimeError('Too many players, can have at most ' + str(TicTacToe.max_players()))
-        # Initialize board
         self.board_size = board_size
-        self.board = [[TicTacToe.EMPTY for _ in range(self.board_size)] for _ in range(self.board_size)]
+        self.board = self.init_board(self.board_size)
+        self.players = self.init_players(players)
+        self.welcome()
+
+    def welcome(self):
+        print('Welcome to a new game of Tic Tac Toe!')
+
+    def init_board(self, board_size):
+        return [[TicTacToe.EMPTY for _ in range(self.board_size)] for _ in range(self.board_size)]
+
+    def init_players(self, players):
         # Set up symbols for players
         symbols = list(TicTacToe.PLAYER_SYMBOLS)
         random.shuffle(symbols)
@@ -34,10 +43,7 @@ class TicTacToe:
         self.players = players
         for player in players:
             setattr(player, SYM_ATTR, symbols.__next__())
-
-    def restart(self):
-        new_self = TicTacToe(self.players, self.board_size)
-        self.__dict__.update(new_self.__dict__)
+        return players
 
     def symbol(self, player):
         return getattr(player, SYM_ATTR)
@@ -62,6 +68,22 @@ class TicTacToe:
         while not self.winning_move(player, *self.turn(player)):
             player = players.__next__()
             self.display()
+        self.win(player)
+        self.display()
+        self.restart()
+
+    def reinit(self, board_size=None, players=None):
+        if board_size is not None:
+            self.board_size = board_size
+        self.board = self.init_board(self.board_size)
+        if players is not None:
+            self.players = self.init_players(players)
+
+    def restart(self):
+        print('Restarting...')
+        self.reinit()
+        self.welcome()
+        self.run_game()
 
     def turn(self, player):
         print('Player ' + getattr(player, SYM_ATTR) + '\'s turn')
@@ -92,14 +114,14 @@ class TicTacToe:
     def winning_move(self, player, row, col):
         # Check row, columns, and diagonals
         sym = self.symbol(player)
-        row_win = self.board[row][:] == [sym]*self.n_cols()
-        col_win = self.board[:][col] == [sym]*self.n_rows()
+        row_win = all([self.board[row][i] == sym for i in range(self.n_cols())])
+        col_win = all([self.board[i][col] == sym for i in range(self.n_rows())])
         maj_diag_win = row == col \
             and all([self.board[i][i] == sym for i in range(min(self.n_rows(), self.n_cols()))])
         min_diag_win = (row + col == self.n_rows() or row + col == self.n_cols()) \
             and all([self.board[-i-1][i] == sym for i in range(min(self.n_rows(), self.n_cols()))])
         if any([row_win, col_win, maj_diag_win, min_diag_win]):
-            self.win(player)
+            return True
 
     def win(self, player):
         print('Player ' + self.symbol(player) + ' wins!')
