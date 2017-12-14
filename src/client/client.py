@@ -19,11 +19,10 @@ class Client(Client):
         self.client_socket.close()
 
 
+host = '127.0.0.1'
+port = 12000
 
 
-
-# host = '127.0.0.1'
-# port = 12000
 # BUFFER_SIZE = 1024
 # MESSAGE = " "
 # def send_move_server(server_socket, column_number, row_number):
