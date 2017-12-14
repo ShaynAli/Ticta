@@ -4,19 +4,20 @@ import string
 import random
 from itertools import cycle
 
-SYM_ATTR = 'symbol'
+# Future TODO: Check if game will end in a tie
 
 
 class TicTacToe:
 
     EMPTY = '0'
     PLAYER_SYMBOLS = string.ascii_letters
+    SYM_ATTR = 'symbol'
 
     @staticmethod
     def max_players():
         return len(TicTacToe.PLAYER_SYMBOLS)
 
-    def __init__(self, players, board_size=3):
+    def __init__(self, players, board_size=3, auto_restart=False):
         '''
         Starts a tic tac toe game
         :param players: A list of Players
@@ -26,15 +27,26 @@ class TicTacToe:
         self.board_size = board_size
         self.board = self.init_board(self.board_size)
         self.players = self.init_players(players)
+        self.turns = []
+        self.auto_restart = auto_restart
         self.welcome()
 
-    def welcome(self):
-        print('Welcome to a new game of Tic Tac Toe!')
+    # Initialization
 
     def init_board(self, board_size):
+        '''
+        FIlls Produces an empty board
+        :param board_size: The dimensions of the board such that the board will have dimensions board_size x board_size
+        :return: An empty board
+        '''
         return [[TicTacToe.EMPTY for _ in range(self.board_size)] for _ in range(self.board_size)]
 
     def init_players(self, players):
+        '''
+        Initializes the players, providing them with symbols
+        :param players: A list of Player objects from the game module
+        :return: The provided player list after initialization
+        '''
         # Set up symbols for players
         symbols = list(TicTacToe.PLAYER_SYMBOLS)
         random.shuffle(symbols)
@@ -42,61 +54,60 @@ class TicTacToe:
         # Initialize players
         self.players = players
         for player in players:
-            setattr(player, SYM_ATTR, symbols.__next__())
+            setattr(player, TicTacToe.SYM_ATTR, symbols.__next__())
         return players
 
-    def symbol(self, player):
-        return getattr(player, SYM_ATTR)
+    def reinit(self, players=None, board_size=None, auto_restart=None):
+        '''
+        Re-initializes the game
+        :param board_size: A new board size to change the game to, set to None to use the same size as before
+        :param players: Use a new set of players, set to None to use the same players before
+        '''
+        self.board_size = board_size if board_size is not None else self.board_size
+        self.board = self.init_board(self.board_size)
+        self.players = self.init_players(players) if players is not None else self.players
+        self.turns = []
+        self.auto_restart = auto_restart if auto_restart is not None else self.auto_restart
 
-    def __repr__(self):
-        return '\n'.join(([' '.join(str(i) for i in row) for row in self.board]))
+    # Game flow
 
-    def display(self):
-        print(self.__repr__())
-
-    def take(self, player, row, col):
-        if self.valid_pos(row, col) and not self.taken_pos(row, col):
-            self.board[row][col] = self.symbol(player)
-            return True
-        else:
-            return False
+    def welcome(self):
+        print('Welcome to a new game of Tic Tac Toe!')
 
     def run_game(self):
         self.display()
         players = (p for p in cycle(self.players))
         player = players.__next__()
-        while not self.winning_move(player, *self.turn(player)):
+        win, tie = False, False
+        while not (win or tie):
             player = players.__next__()
             self.display()
-        self.win(player)
+            win = self.check_win(player, *self.turn(player))
+            tie = self.check_tie()
+        if win:
+            self.win(player)
+        elif tie:
+            self.tie()
+        else:
+            raise RuntimeError('Game is finished but not won or tied')
         self.display()
-        self.restart()
-
-    def reinit(self, board_size=None, players=None):
-        if board_size is not None:
-            self.board_size = board_size
-        self.board = self.init_board(self.board_size)
-        if players is not None:
-            self.players = self.init_players(players)
-
-    def restart(self):
-        print('Restarting...')
-        self.reinit()
-        self.welcome()
-        self.run_game()
+        if self.auto_restart:
+            self.restart()
+        # TODO: Add prompt to restart
 
     def turn(self, player):
-        print('Player ' + getattr(player, SYM_ATTR) + '\'s turn')
+        print('Player ' + self.symbol(player) + '\'s turn')
         row, col = (self.input_row(player), self.input_col(player))
         while not (self.take(player, row, col)):
             if not self.valid_pos(row, col):
                 print('That position is invalid')
-            elif self.board[row][col] == getattr(player, SYM_ATTR):
+            elif self.board[row][col] == self.symbol(player):
                 print('You already have that position!')
             else:
                 print('That position has already been taken by player ' + self.board[row][col])
             row, col = (self.input_row(player), self.input_col(player))
         print('You made a move on ' + str(row + 1) + ', ' + str(col + 1))
+        self.turns.append((player, (row, col)))
         return row, col
 
     def input_row(self, player):
@@ -111,20 +122,70 @@ class TicTacToe:
                                  'Please enter an integer from 1 to ' + str(self.n_cols()) +
                                  ' for the column number: ')) - 1
 
-    def winning_move(self, player, row, col):
-        # Check row, columns, and diagonals
-        sym = self.symbol(player)
-        row_win = all([self.board[row][i] == sym for i in range(self.n_cols())])
-        col_win = all([self.board[i][col] == sym for i in range(self.n_rows())])
-        maj_diag_win = row == col \
-            and all([self.board[i][i] == sym for i in range(min(self.n_rows(), self.n_cols()))])
-        min_diag_win = (row + col == self.n_rows() or row + col == self.n_cols()) \
-            and all([self.board[-i-1][i] == sym for i in range(min(self.n_rows(), self.n_cols()))])
-        if any([row_win, col_win, maj_diag_win, min_diag_win]):
+    def take(self, player, row, col):
+        if self.valid_pos(row, col) and not self.taken_pos(row, col):
+            self.board[row][col] = self.symbol(player)
             return True
+        return False
 
     def win(self, player):
         print('Player ' + self.symbol(player) + ' wins!')
+
+    def tie(self):
+        print('Tie game!')
+
+    def restart(self):
+        print('Restarting...')
+        self.reinit()
+        self.welcome()
+        self.run_game()
+
+    # Utilities
+
+    def symbol(self, player):
+        '''
+        Get the symbol of a player
+        :param player: The player whose symbol will be retrieved
+        :return: A character, representing the symbol of the given player
+        '''
+        return getattr(player, TicTacToe.SYM_ATTR)
+
+    def __repr__(self):
+        return '\n'.join(([' '.join(str(i) for i in row) for row in self.board]))
+
+    def display(self):
+        print(self.__repr__())
+
+    # Checks
+
+    def check_win(self, player, row, col):
+        '''
+        Checks if a given move was a winning move
+        :param player: The player making the move
+        :param row: The row the move was made on
+        :param col: The column the move was made on
+        '''
+        # Check row, columns, and diagonals
+        move = (player, row, col)
+        li = [self.maj_diag_win(*move), self.min_diag_win(*move), self.row_win(*move), self.col_win(*move)]
+        return any(li)
+
+    def maj_diag_win(self, player, row, col):
+        return row == col and \
+               all([self.board[i][i] == self.symbol(player) for i in range(min(self.n_rows(), self.n_cols()))])
+
+    def min_diag_win(self, player, row, col):
+        return (row + col == self.n_rows() or row + col == self.n_cols()) \
+               and all([self.board[-i-1][i] == self.symbol(player) for i in range(min(self.n_rows(), self.n_cols()))])
+
+    def row_win(self, player, row, col):
+        return all([self.board[row][i] == self.symbol(player) for i in range(self.n_cols())])
+
+    def col_win(self, player, row, col):
+        return all([self.board[i][col] == self.symbol(player) for i in range(self.n_rows())])
+
+    def check_tie(self):
+        return len(self.turns) >= self.board_size**2  # Fewer turns have been played than the numbers of positions
 
     def n_rows(self):
         return self.board_size
