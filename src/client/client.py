@@ -1,9 +1,9 @@
 ''' client.py - Deals with a game client '''
-import socket
-from .abstract import AbstractClient
+from src.client.abstract.AbstractClient import Client
+from abc import ABCMeta, abstractmethod
 
 
-class Client(AbstractClient):
+class Client(Client):
 
     def __init__(self, client_socket, address):
         self.client_socket = client_socket
