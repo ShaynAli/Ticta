@@ -39,4 +39,3 @@ while True:
     else:
         print('Not a valid command')
 
-
