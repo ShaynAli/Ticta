@@ -1,27 +1,25 @@
 ''' client.py - Deals with a game client '''
 from src.client.abstract.abstract import Client
-from abc import ABCMeta, abstractmethod
-
-
-class Client(Client):
-
-    def __init__(self, client_socket, address):
-        self.client_socket = client_socket
-        self.address = address
-
-    def receive_from_server(self):
-        return self.client_socket.recv(1024).decode()
-
-    def send_to_client(self, message):
-        self.client_socket.send(message.encode())
-
-    def terminator(self):
-        self.client_socket.close()
-
 
 host = '127.0.0.1'
 port = 12000
 
+
+class Client:
+
+    def __init__(self, socket, address, buffer_size=1024):
+        self.socket = socket
+        self.address = address
+        self.buffer_size = buffer_size
+
+    def receive_from_server(self):
+        return self.socket.recv(1024).decode()
+
+    def send_to_client(self, message):
+        self.socket.send(message.encode())
+
+    def terminator(self):
+        self.socket.close()
 
 # BUFFER_SIZE = 1024
 # MESSAGE = " "
@@ -68,13 +66,8 @@ port = 12000
 #     if data == 'draw':
 #         on_draw()
 #
-#
-#
-#
 #     data = client.recv(BUFFER_SIZE)
 #     print("Opponent move:", data.decode())
 #     data = client.recv(BUFFER_SIZE)
-#
-#
 #
 # client.close()
