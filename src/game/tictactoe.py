@@ -75,7 +75,6 @@ class TicTacToe:
         print('Welcome to a new game of Tic Tac Toe!')
 
     def run_game(self):
-        self.display()
         players = (p for p in cycle(self.players))
         player = players.__next__()
         win, tie = False, False
@@ -206,8 +205,8 @@ class TicTacToe:
         return True if not self.valid_pos(row, col) else self.board[row][col] != self.EMPTY
 
 
-N_PLAYERS = 2
-BOARD_SIZE = 3
+N_PLAYERS = 1
+BOARD_SIZE = 5
 
 from game import Player
 players = [Player() for _ in range(N_PLAYERS)]
