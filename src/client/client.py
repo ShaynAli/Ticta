@@ -9,7 +9,7 @@ class Client(Client):
         self.client_socket = client_socket
         self.address = address
 
-    def receive_from_client(self):
+    def receive_from_server(self):
         return self.client_socket.recv(1024).decode()
 
     def send_to_client(self, message):

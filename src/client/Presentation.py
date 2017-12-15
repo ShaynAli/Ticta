@@ -1,19 +1,23 @@
 from tkinter import *
-
+from tkinter.font import Font
+from threading import Thread
 import sys
 
 
 def start_game(event):
+    event.widget.pack_forget()
+
     for x in range(0, game_rows):
         for y in range(0, game_columns):
             game_array[x][y].config(state=NORMAL, text=" ", bg="white")
-    label.config(text="Looking for a player")
+    top_label.config(text="Looking for a player")
 
     #call client to get start game:
     #   get label and get is_turn value
 
-    label.config(text="Game begun")
+    top_label.config(text="Game begins...")
 
+    #wait for response
 
 
 def quit_game(event):
@@ -21,10 +25,14 @@ def quit_game(event):
 
 
 def button_press(event):
+
+    #send data to server
+
     if event.widget["state"] == NORMAL:
-        event.widget.config(text=myLabel, fg="white", bg="black", state=DISABLED)
+        event.widget.config(text=my_label, disabledforeground=my_color, bg="black", state=DISABLED)
 
 
+#variables
 is_turn = True
 
 game_rows = 3
@@ -32,44 +40,48 @@ game_columns = 3
 
 game_array = [[0 for x in range(game_rows)] for y in range(game_columns)]
 
-myLabel = "X"
+my_label, my_color = "X", "red"
 
-opponentLabel = "O"
+opponent_label, opponent_color = "O", "blue"
+
 
 #main window
 window = Tk()
-window.geometry("380x420")
+window.geometry("452x540")
 
-#Strat frame skeleton
-startFrame = Frame(window)
-startFrame.pack(fill=BOTH)
+#GUI frame skeleton
+top_frame = Frame(window)
+top_frame.pack(fill=BOTH, side=TOP)
 
-topFrame = Frame(startFrame)
-topFrame.pack(fill=BOTH)
+mid_frame = Frame(window)
+mid_frame.pack(fill=BOTH)
 
-middleFrame = Canvas(startFrame, height=327, bg="black")
-middleFrame.pack(fill=BOTH)
+bottom_frame = Canvas(window)
+bottom_frame.pack(fill=X, side=BOTTOM)
 
-bottomFrame = Canvas(window)
-bottomFrame.pack(fill=X, side=BOTTOM)
+#GUI widgets
 
-#start page widgets
-label = Label(topFrame, text="The SEXY Tic Tak Toe...", bg="black", fg="white")
-label.pack(fill=X)
+top_label = Label(top_frame, text="The SEXY Tic Tak Toe...", bg="black", fg="white")
+top_label.pack(fill=X)
+
+my_font = Font(family="Helvetica", size=60)
+
+grid_canvas = Canvas(mid_frame)
+grid_canvas.place()
 
 for x in range(0, game_rows):
     for y in range(0, game_columns):
-        button = Button(middleFrame, width=17, height=7, state=DISABLED)
-        button.grid(row=x, column=y)
+        button = Button(mid_frame, width=3, height=0, state=DISABLED, font=my_font, bg="white", disabledforeground="white", text=str(x)+str(y))
+        button.grid(row=x, column=y, sticky=NSEW)
         button.bind('<Button-1>', button_press)
         game_array[x][y] = button
 
-buttonStart = Button(bottomFrame, text="New game", fg="green")
-buttonStart.bind("<Button-1>", start_game)
-buttonStart.pack(fill=X)
+button_start = Button(bottom_frame, text="New game", fg="green")
+button_start.bind("<Button-1>", start_game)
+button_start.pack(fill=X)
 
-buttonQuit = Button(bottomFrame, text="Quit", fg="red")
-buttonQuit.bind("<Button-1>", quit_game)
-buttonQuit.pack(fill=X)
+button_quit = Button(bottom_frame, text="Quit/Close", fg="red")
+button_quit.bind("<Button-1>", quit_game)
+button_quit.pack(fill=X)
 
 window.mainloop()
