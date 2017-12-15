@@ -1,5 +1,5 @@
 ''' client.py - Deals with a game client '''
-from src.client.abstract.AbstractClient import Client
+from src.client.abstract.abstract import Client
 from abc import ABCMeta, abstractmethod
 
 
