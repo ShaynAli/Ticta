@@ -6,47 +6,79 @@ import random
 import sys
 
 
-class Ttt_game:
-    def __init__(self, game_rows, game_columns, player):
+def get_random_color(pastel_factor=0.5):
+    return [(x+pastel_factor)/(1.0+pastel_factor) for x in [random.uniform(0, 1.0) for i in [1, 2, 3]]]
+
+
+def color_distance(c1,c2):
+    return sum([abs(x[0]-x[1]) for x in zip(c1, c2)])
+
+
+def generate_new_color(existing_colors, pastel_factor=0.5):
+    max_distance = None
+    best_color = None
+    for i in range(0,100):
+        color = get_random_color(pastel_factor=pastel_factor)
+        if not existing_colors:
+            return color
+        best_distance = min([color_distance(color, c) for c in existing_colors])
+        if not max_distance or best_distance > max_distance:
+            max_distance = best_distance
+            best_color = color
+    return best_color
+
+
+def shapes_gen(num_shapes):
+    shapes = []
+
+    for x in range(0, num_shapes):
+        points = []
+
+        for y in range(0, 2*x + 6):
+            rand_int = random.randint(20, 120)
+            points.append(rand_int)
+
+        shapes.append(points)
+    return shapes
+
+
+def colors_gen(num_colors):
+    colors = []
+
+    for x in range(0, num_colors):
+        color = generate_new_color(colors)
+        hex_color = None
+        for y in range(0, 3):
+            hex_color = hex(color[y])
+            print(hex_color)
+        colors.append(color)
+    return colors
+
+
+class TttGame:
+    def __init__(self, game_rows, game_columns, player, colors=["red", "green", "blue", "orange", "purple", "pink", "yellow", "indigo", "violet"]):
         self.num_players = player
 
         self.game_rows = game_rows
         self.game_columns = game_columns
 
-        self.curr_label, self.curr_color = " ", "#33cccc"
-        self.my_color = "#3366ff"
-        self.opponent_labels = []
-        self.opponent_color = "#33cccc"
+        self.player_shapes = []
+        self.player_colors = colors
 
-        self.curr_player = 0
-
-        self.opponent_gen()
+        self.curr_player = -1
 
         self.tk = GameGUI(self)
-
-    def opponent_gen(self):
-        taken_chars = [0 for x in range(52)]
-
-        chars = string.ascii_letters
-
-        for p in range(0, self.num_players):
-            is_not_available = True
-
-            while is_not_available:
-                rand_num = random.randint(0, 51)
-
-                if taken_chars[rand_num] != 1:
-                    self.opponent_labels.append(chars[rand_num])
-                    is_not_available = False
-
-                    taken_chars[rand_num] = 1
 
     def start_game(self, event):
         event.widget.pack_forget()
 
+        self.player_shapes = shapes_gen(self.num_players)
+        # self.player_colors = colors_gen(self.num_players)
+
         for x in range(0, self.game_rows):
             for y in range(0, self.game_columns):
-                self.tk.game_array[x][y].config(state=NORMAL, text=str(x)+str(y), fg="white")
+                self.tk.game_array[x][y].delete("all")
+                self.tk.game_array[x][y].config(state=NORMAL)
         self.tk.top_label.config(text="Looking for a player")
 
         # call client to get start game:
@@ -58,17 +90,11 @@ class Ttt_game:
         sys.exit()
 
     def status_change(self):
-        if self.curr_player == 0:
-            self.curr_color = self.my_color
-            self.tk.top_label.config(text="Your move...", fg=self.curr_color)
-        else:
-            self.curr_color = self.opponent_color
-            self.tk.top_label.config(text="Opponent's move...", fg=self.opponent_color)
-
         self.curr_player = self.curr_player + 1
-        if self.curr_player == self.num_players:
+        self.tk.top_label.config(text="Opponents's turn...")
+        if self.curr_player == self.num_players or self.curr_player == 0:
             self.curr_player = 0
-        self.curr_label = self.opponent_labels[self.curr_player]
+            self.tk.top_label.config(text="Your turn...")
 
     def toggle_buttons(self):
         if self.curr_player == 0:
@@ -85,7 +111,10 @@ class Ttt_game:
         # send data to server
 
         if event.widget["state"] == NORMAL:
-            event.widget.config(text=self.curr_label, disabledforeground=self.curr_color, state=DISABLED)
+            print(int(event.widget["width"])-140 + int(event.widget["height"])-140)
+
+            event.widget.config(state=DISABLED)
+            event.widget.create_polygon(self.player_shapes[self.curr_player], fill=self.player_colors[self.curr_player])
 
             # self.toggle_buttons()
 
@@ -119,10 +148,10 @@ class GameGUI:
 
         for x in range(0, self.game.game_rows):
             for y in range(0, self.game.game_columns):
-                button = Button(self.grid_frame, width=3, height=0, state=DISABLED, font=self.my_font, bg="white")
-                button.grid(row=x, column=y)
-                button.bind('<Button-1>', self.game.button_press)
-                self.game_array[x][y] = button
+                canvas = Canvas(self.grid_frame, width=140+x, height=140+y, state=DISABLED, bg="white")
+                canvas.grid(row=x, column=y)
+                canvas.bind('<Button-1>', self.game.button_press)
+                self.game_array[x][y] = canvas
 
         self.button_start.bind("<Button-1>", self.game.start_game)
         self.button_start.place(relx=0.5, rely=0.92, anchor=CENTER)
@@ -138,5 +167,5 @@ game_row = 5
 game_column = 5
 players = 3
 
-game = Ttt_game(game_row, game_column, players)
+game = TttGame(game_row, game_column, players)
 game.tk.build_game()
