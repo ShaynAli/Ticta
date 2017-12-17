@@ -3,7 +3,6 @@ import socket
 from select import select
 from threading import Thread
 from itertools import count
-from multiprocessing import Pool
 
 
 # TODO: Write for logging, should be able to log ClientThreads, Server, Games, etc to console and file
