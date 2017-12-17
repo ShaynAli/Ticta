@@ -1,73 +1,47 @@
 ''' client.py - Deals with a game client '''
-from src.client.abstract.abstract import Client
-
-host = '127.0.0.1'
-port = 12000
+import socket
 
 
 class Client:
 
-    def __init__(self, socket, address, buffer_size=1024):
-        self.socket = socket
-        self.address = address
+    EXIT_MSG = 'done'
+
+    def __init__(self, verbose=True, buffer_size=1024):
+        self.socket = socket.socket()
         self.buffer_size = buffer_size
 
-    def receive_from_server(self):
-        return self.socket.recv(1024).decode()
+    def connect(self, address):
+        print('Attempting to connect to ' + str(address))
+        try:
+            self.socket.connect(address)
+        except Exception as e:
+            print('Unable to connect')
+            raise e
+        print('Connected to ' + str(address))
+        print('Type ' + Client.EXIT_MSG + ' to exit at any time')
 
-    def send_to_client(self, message):
-        self.socket.send(message.encode())
+    def play(self):
+        try:
+            out_msg = input('Send to server: ')
+            while out_msg and out_msg != Client.EXIT_MSG:
+                self.send(out_msg)  # Only if a message is sent
+                out_msg = input('Send to server: ')
+        except EOFError:
+            print('Exiting')
+            self.socket.close()
+            # self.socket.shutdown()
 
-    def terminator(self):
-        self.socket.close()
+    def send(self, msg):
+        try:
+            self.socket.send(msg.encode())
+        except EOFError as e:
+            raise e
+        except Exception as e:
+            print('Unable to send, ensure you\'re connected before sending')
+            print(e)
 
-# BUFFER_SIZE = 1024
-# MESSAGE = " "
-# def send_move_server(server_socket, column_number, row_number):
-#     message = 'move' + ' ' + str(column_number) + ' ' + str(row_number)
-#     server_socket.send(message.encode())
-#
-# def opponent_move():
-#     pass
-#
-# def on_win():
-#     pass
-#
-# def on_draw():
-#     pass
-#
-#
-# gameEnd = False
-#
-# server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-# server.connect((host, port))
-#
-# data = server.recv(BUFFER_SIZE)
-# print(data.decode())
-#
-# if data.decode() == 'Waiting for player to match':
-#     data = server.recv(BUFFER_SIZE)
-#     print(data.decode())
-#
-# data = data.decode()
-# while data != 'end':
-#
-#     if data == 'Turn':
-#         # will need to be user interface but console works for testing
-#         column = input("Enter your column:")
-#         row = input ('Enter your row:')
-#         send_move_server(server, column, row)
-#     if data == 'wait':
-#         data = server.recv(BUFFER_SIZE)
-#         if data == 'move':
-#             opponent_move()
-#     if data == 'win':
-#         on_win()
-#     if data == 'draw':
-#         on_draw()
-#
-#     data = client.recv(BUFFER_SIZE)
-#     print("Opponent move:", data.decode())
-#     data = client.recv(BUFFER_SIZE)
-#
-# client.close()
+    def receive(self):
+        try:
+            return self.socket.recv(self.buffer_size).decode()
+        except ConnectionAbortedError:
+            print('Server disconnected')
