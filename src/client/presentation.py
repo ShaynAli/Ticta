@@ -10,13 +10,8 @@ def get_random_color(pastel_factor=0.5):
     return [(x+pastel_factor)/(1.0+pastel_factor) for x in [random.uniform(0, 1.0) for i in [1, 2, 3]]]
 
 
-<<<<<<< HEAD
-    #call client to get start game.py:
-    #   get label and get is_turn value
-=======
 def color_distance(c1,c2):
     return sum([abs(x[0]-x[1]) for x in zip(c1, c2)])
->>>>>>> ce207a52ea0bdd8679aa36c2dcbba7bcc6162c84
 
 
 def generate_new_color(existing_colors, pastel_factor=0.5):
@@ -112,14 +107,8 @@ class TttGame:
                 for y in range(0, self.game_columns):
                     self.tk.game_array[x][y].config(state=DISABLED)
 
-<<<<<<< HEAD
-button_start = Button(bottom_frame, text="New game.py", fg="green")
-button_start.bind("<Button-1>", start_game)
-button_start.pack(fill=X)
-=======
     def button_press(self, event):
         # send data to server
->>>>>>> ce207a52ea0bdd8679aa36c2dcbba7bcc6162c84
 
         if event.widget["state"] == NORMAL:
             print(int(event.widget["width"])-140 + int(event.widget["height"])-140)
