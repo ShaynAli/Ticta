@@ -161,14 +161,6 @@ class GameGUI:
 
 
 # variables
-<<<<<<< HEAD:src/client/interface.py
 game = TttGame()
 game.tk.build_game()
-=======
-game_row = 5
-game_column = 5
-players = 3
 
-game = TttGame(game_row, game_column, players)
-game.tk.build_game()
->>>>>>> b34265eeb0c7801e57fdb587094c80bbb0c30fa1:src/client/presentation.py
