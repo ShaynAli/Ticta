@@ -1,56 +1,76 @@
 ''' server.py - Deals with a game server '''
 import socket
 from threading import Thread
-from src.client.factories import client_factory
-import sys
+from itertools import count
+from time import sleep
 
 
 class Server:
 
-    def __init__(self, ip, port):
-        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket.bind((ip, port))
-        self.server_socket.listen(20)
-        self.clients = []
+    def __init__(self, port, backlog=32, verbosity=0):
+        self.verbosity = verbosity
+        self.log('Starting server')
+        self.port = port
+        self.backlog = backlog
+        self.socket = socket.socket()
+        self.online = True
 
-    def wait_for_connection(self):
-        while True:
-            connection_socket, address = self.server_socket.accept()
-            self.add_client(connection_socket, address)
+    def listen(self):
+        listen_address = (socket.gethostname(), self.port)
+        self.socket.bind(listen_address)
+        self.socket.listen(self.backlog)
+        self.log('Listening on ' + str(listen_address))
+        while self.online:
+            client_socket, client_address = self.socket.accept()
+            self.log('Accepted connection at ' + str(client_address))
+            client = Server.ClientThread(self, client_socket, client_address, self.verbosity//2)
+            client.start()
 
-    def add_client(self, connection_socket, address):
-        self.clients.append(client_factory.ClientFactory.create_client(connection_socket, address))
+    def log(self, msg, level=0):
+        if level <= self.verbosity:
+            print(msg)
 
-    def terminator(self):
-        for client in self.clients:
-            client.terminator()
+    class ClientThread(Thread):
 
+        thread_no = (i for i in count())
 
-class ServerConsole:
+        def __init__(self, server, socket, address, frequency=0.02, buffer_size=1024, verbosity=0):
+            self.server = server
+            super().__init__()
+            self.thread_no = Server.ClientThread.thread_no.__next__()
+            self.socket = socket
+            self.address = address
+            self.disconnected = False
+            self.frequency = frequency
+            self.buffer_size = buffer_size
+            self.verbosity = verbosity
+            self.log('ClientThread ' + str(self.thread_no) + ' created at ' + str(address))
 
-    def __init__(self, ip='127.0.0.1', port=3030):
-        self.server = Server(ip, port)
-        self.wait_thread = Thread(target=self.server.wait_for_connection)
+        def send(self, msg):
+            if not msg:
+                return
+            try:
+                self.socket.send(msg.encode())
+            except Exception as e:
+                self.log('Unable to send to client')
+                raise e
 
-    def start_server(self):
-        self.wait_thread.start()
+        def receive(self):
+            try:
+                return self.socket.recv(self.buffer_size).decode()
+            except Exception as e:
+                self.log('Unable to receive from client')
+                raise e
 
-    def console(self):
-        self.start_server()
-        print('Server Online, type help for commands')
-        while True:
-            message = input('>')
-            if message == 'help':
-                print('')
-            elif message == 'exit':
-                sys.exit()
-            else:
-                print('Not a valid command')
+        def run(self):
+            while not self.disconnected:
+                self.action(self.receive())
+                sleep(self.frequency)
 
+        def action(self, msg):
+            if msg:
+                self.log('Received: ' + str(msg))
 
-if __name__ == '__main__':
-    console = ServerConsole()
-    console_thread = Thread(target=console.console)
-    console_thread.start()
-    console_thread.join()
-
+        def log(self, msg, level=0):
+            if level <= self.verbosity:
+                print('ClientThread ' + str(self.thread_no) + ': ' + str(msg))
