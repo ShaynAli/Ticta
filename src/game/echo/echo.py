@@ -1,8 +1,9 @@
 import sys
 import socket
+from select import select
 from threading import Thread
 from itertools import count
-from select import select
+from multiprocessing import Pool
 
 
 # TODO: Write for logging, should be able to log ClientThreads, Server, Games, etc to console and file
@@ -35,14 +36,17 @@ class Client:
         print('Connected to ' + str(address))
         print('Type ' + Client.EXIT_MSG + ' to exit at any time')
 
-    def run(self):
-        out_msg = input('Send to server: ')
-        while out_msg != Client.EXIT_MSG:
-            if self.send(out_msg):  # Only if a message is sent
-                print('Waiting on reply')
-                in_msg = self.receive()
-                print('Server reply: ' + in_msg)
+    def play(self):
+        try:
             out_msg = input('Send to server: ')
+            while out_msg != Client.EXIT_MSG:
+                if self.send(out_msg):  # Only if a message is sent
+                    print('Waiting on reply')
+                    in_msg = self.receive()
+                    print('Server reply: ' + in_msg)
+                out_msg = input('Send to server: ')
+        except EOFError:
+            print('Exiting')
 
     def send(self, msg):
         try:
@@ -64,19 +68,28 @@ class Client:
 
 class Server:
 
+    EXIT_MSG = 'done'
+
     def __init__(self, port=SERVER_PORT, backlog=32):
-        self.socket = socket.socket()
-        self.socket.bind((socket.gethostname(), port))
+        print('Starting server')
+        self.port = port
         self.backlog = backlog
+        self.socket = socket.socket()
+        self.online = True
+
+    def exit(self, c_in):
+        return c_in != Server.EXIT_MSG
 
     def listen(self):
-        print('Running server')
+        listen_address = (socket.gethostname(), self.port)
+        self.socket.bind(listen_address)
         self.socket.listen(self.backlog)
-        while True:
-            client_socket, address = self.socket.accept()
-            print('Accepted connection at ' + str(address))
-            client = Server.ClientThread(client_socket, address)
-            client.run()
+        print('Listening on ' + str(listen_address))
+        while self.online:
+            client_socket, client_address = self.socket.accept()
+            print('Accepted connection at ' + str(client_address))
+            client = Server.ClientThread(client_socket, client_address)
+            client.start()
 
     def log(self, msg):
         print(msg)
@@ -91,7 +104,7 @@ class Server:
             self.socket = socket
             self.address = address
             self.disconnected = False
-            print('ClientThread ', str(self.thread_no), ' created at ', str(address))
+            print('ClientThread ' + str(self.thread_no) + ' created at ', str(address))
 
         def send(self, msg):
             if not msg:
@@ -102,7 +115,7 @@ class Server:
                 print('Unable to send to client')
                 print(e)
 
-        def recieve(self):
+        def receive(self):
             try:
                 return self.socket.recv(BUFFER_SIZE).decode()
             except ConnectionAbortedError:
@@ -113,9 +126,11 @@ class Server:
             # TODO - Detect disconnection, possibly with select
             # See Socket Programming HOWTO by McMillan
             while not self.disconnected:
-                client_msg = self.recieve()
-                self.log('Received: ' + str(client_msg))
-                self.send('You sent: ' + client_msg)
+                self.reply_to(self.receive())
+
+        def reply_to(self, msg):
+            self.log('Received: ' + str(msg))
+            self.send('You sent: ' + str(msg))
 
         def log(self, msg):
             print('ClientThread ' + str(self.thread_no) + ': ' + str(msg))

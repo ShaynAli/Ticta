@@ -1,70 +1,76 @@
 ''' server.py - Deals with a game server '''
-import sys, socket, socketserver, time
+import socket
 from threading import Thread
-from multiprocessing.pool import ThreadPool
-from ast import literal_eval
-sys.path.append('..')
-from common.constants import SERVER_HOST, SERVER_PORT, CLIENT_PORT_RANGE
-
-# TODO: Detect when a client disconnects and react accordingly
-
-
-class Client:
-    ''' A class for the server to deal with connected client '''
-    BUFFER_SIZE = 1024
-
-    def __init__(self, socket):
-        self.socket = socket
-
-    def send(self, data):
-        self.socket.send(str(data).encode())
-
-    def receive(self):
-        return self.socket.receive(BUFFER_SIZE).decode()
-
-    def disconnect(self):
-        self.socket.close()
+from itertools import count
+from time import sleep
 
 
 class Server:
 
-    SOCKET_BACKLOG = 32
-    SLEEP = 0.2
+    def __init__(self, port, backlog=32, verbosity=0):
+        self.verbosity = verbosity
+        self.log('Starting server')
+        self.port = port
+        self.backlog = backlog
+        self.socket = socket.socket()
+        self.online = True
 
-    def __init__(self, port):
-        # Set up the listening thread
-        self.listening_thread = Thread(target=self.listen, kwargs={'port': port})
-        self.wait_queue = []
-        self.clients = set()
+    def listen(self):
+        listen_address = (socket.gethostname(), self.port)
+        self.socket.bind(listen_address)
+        self.socket.listen(self.backlog)
+        self.log('Listening on ' + str(listen_address))
+        while self.online:
+            client_socket, client_address = self.socket.accept()
+            self.log('Accepted connection at ' + str(client_address))
+            client = Server.ClientThread(self, client_socket, client_address, self.verbosity//2)
+            client.start()
 
-    def listen(self, port):
-        access_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        access_socket.bind((socket.gethostname(), port))
-        access_socket.listen(Server.SOCKET_BACKLOG)
-        while True:
-            self.add_client(access_socket.accept()[0])  # accept() returns (socket, address), we just want the socket
-            time.sleep(Server.SLEEP)
+    def log(self, msg, level=0):
+        if level <= self.verbosity:
+            print(msg)
 
-    def add_client(self, socket):
-        client = Client(socket)
-        self.wait_queue.append(client)
-        self.clients.add(client)
+    class ClientThread(Thread):
 
-    def disconnect_all(self):
-        for client in self.clients:
-            client.disconnect()
+        thread_no = (i for i in count())
 
-    class MMServer:
-        ''' A matchmaking server '''
-        pass
+        def __init__(self, server, socket, address, frequency=0.02, buffer_size=1024, verbosity=0):
+            self.server = server
+            super().__init__()
+            self.thread_no = Server.ClientThread.thread_no.__next__()
+            self.socket = socket
+            self.address = address
+            self.disconnected = False
+            self.frequency = frequency
+            self.buffer_size = buffer_size
+            self.verbosity = verbosity
+            self.log('ClientThread ' + str(self.thread_no) + ' created at ' + str(address))
 
-    class GameServer:
-        ''' A server running a game.py '''
-        def __init__(self, game):
-            self.game = game
+        def send(self, msg):
+            if not msg:
+                return
+            try:
+                self.socket.send(msg.encode())
+            except Exception as e:
+                self.log('Unable to send to client')
+                raise e
 
-        def action(self):
-            '''
-            Process an action from the client
-            '''
-            pass
+        def receive(self):
+            try:
+                return self.socket.recv(self.buffer_size).decode()
+            except Exception as e:
+                self.log('Unable to receive from client')
+                raise e
+
+        def run(self):
+            while not self.disconnected:
+                self.action(self.receive())
+                sleep(self.frequency)
+
+        def action(self, msg):
+            if msg:
+                self.log('Received: ' + str(msg))
+
+        def log(self, msg, level=0):
+            if level <= self.verbosity:
+                print('ClientThread ' + str(self.thread_no) + ': ' + str(msg))
