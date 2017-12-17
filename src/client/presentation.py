@@ -12,7 +12,7 @@ def start_game(event):
             game_array[x][y].config(state=NORMAL, text=" ", bg="white")
     top_label.config(text="Looking for a player")
 
-    #call client to get start game:
+    #call client to get start game.py:
     #   get label and get is_turn value
 
     top_label.config(text="Game begins...")
@@ -76,7 +76,7 @@ for x in range(0, game_rows):
         button.bind('<Button-1>', button_press)
         game_array[x][y] = button
 
-button_start = Button(bottom_frame, text="New game", fg="green")
+button_start = Button(bottom_frame, text="New game.py", fg="green")
 button_start.bind("<Button-1>", start_game)
 button_start.pack(fill=X)
 

@@ -1,56 +1,70 @@
 ''' server.py - Deals with a game server '''
-import socket
+import sys, socket, socketserver, time
 from threading import Thread
-from src.client.factories import client_factory
-import sys
+from multiprocessing.pool import ThreadPool
+from ast import literal_eval
+sys.path.append('..')
+from common.constants import SERVER_HOST, SERVER_PORT, CLIENT_PORT_RANGE
+
+# TODO: Detect when a client disconnects and react accordingly
+
+
+class Client:
+    ''' A class for the server to deal with connected client '''
+    BUFFER_SIZE = 1024
+
+    def __init__(self, socket):
+        self.socket = socket
+
+    def send(self, data):
+        self.socket.send(str(data).encode())
+
+    def receive(self):
+        return self.socket.receive(BUFFER_SIZE).decode()
+
+    def disconnect(self):
+        self.socket.close()
 
 
 class Server:
 
-    def __init__(self, ip, port):
-        self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.server_socket.bind((ip, port))
-        self.server_socket.listen(20)
-        self.clients = []
+    SOCKET_BACKLOG = 32
+    SLEEP = 0.2
 
-    def wait_for_connection(self):
+    def __init__(self, port):
+        # Set up the listening thread
+        self.listening_thread = Thread(target=self.listen, kwargs={'port': port})
+        self.wait_queue = []
+        self.clients = set()
+
+    def listen(self, port):
+        access_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        access_socket.bind((socket.gethostname(), port))
+        access_socket.listen(Server.SOCKET_BACKLOG)
         while True:
-            connection_socket, address = self.server_socket.accept()
-            self.add_client(connection_socket, address)
+            self.add_client(access_socket.accept()[0])  # accept() returns (socket, address), we just want the socket
+            time.sleep(Server.SLEEP)
 
-    def add_client(self, connection_socket, address):
-        self.clients.append(client_factory.ClientFactory.create_client(connection_socket, address))
+    def add_client(self, socket):
+        client = Client(socket)
+        self.wait_queue.append(client)
+        self.clients.add(client)
 
-    def terminator(self):
+    def disconnect_all(self):
         for client in self.clients:
-            client.terminator()
+            client.disconnect()
 
+    class MMServer:
+        ''' A matchmaking server '''
+        pass
 
-class ServerConsole:
+    class GameServer:
+        ''' A server running a game.py '''
+        def __init__(self, game):
+            self.game = game
 
-    def __init__(self, ip='127.0.0.1', port=3030):
-        self.server = Server(ip, port)
-        self.wait_thread = Thread(target=self.server.wait_for_connection)
-
-    def start_server(self):
-        self.wait_thread.start()
-
-    def console(self):
-        self.start_server()
-        print('Server Online, type help for commands')
-        while True:
-            message = input('>')
-            if message == 'help':
-                print('')
-            elif message == 'exit':
-                sys.exit()
-            else:
-                print('Not a valid command')
-
-
-if __name__ == '__main__':
-    console = ServerConsole()
-    console_thread = Thread(target=console.console)
-    console_thread.start()
-    console_thread.join()
-
+        def action(self):
+            '''
+            Process an action from the client
+            '''
+            pass
