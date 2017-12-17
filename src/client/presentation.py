@@ -1,87 +1,182 @@
 from tkinter import *
 from tkinter.font import Font
+import string
 from threading import Thread
+import random
 import sys
 
 
-def start_game(event):
-    event.widget.pack_forget()
+def get_random_color(pastel_factor=0.5):
+    return [(x+pastel_factor)/(1.0+pastel_factor) for x in [random.uniform(0, 1.0) for i in [1, 2, 3]]]
 
-    for x in range(0, game_rows):
-        for y in range(0, game_columns):
-            game_array[x][y].config(state=NORMAL, text=" ", bg="white")
-    top_label.config(text="Looking for a player")
 
+<<<<<<< HEAD
     #call client to get start game.py:
     #   get label and get is_turn value
-
-    top_label.config(text="Game begins...")
-
-    #wait for response
-
-
-def quit_game(event):
-    sys.exit()
+=======
+def color_distance(c1,c2):
+    return sum([abs(x[0]-x[1]) for x in zip(c1, c2)])
+>>>>>>> ce207a52ea0bdd8679aa36c2dcbba7bcc6162c84
 
 
-def button_press(event):
-
-    #send data to server
-
-    if event.widget["state"] == NORMAL:
-        event.widget.config(text=my_label, disabledforeground=my_color, bg="black", state=DISABLED)
-
-
-#variables
-is_turn = True
-
-game_rows = 3
-game_columns = 3
-
-game_array = [[0 for x in range(game_rows)] for y in range(game_columns)]
-
-my_label, my_color = "X", "red"
-
-opponent_label, opponent_color = "O", "blue"
+def generate_new_color(existing_colors, pastel_factor=0.5):
+    max_distance = None
+    best_color = None
+    for i in range(0,100):
+        color = get_random_color(pastel_factor=pastel_factor)
+        if not existing_colors:
+            return color
+        best_distance = min([color_distance(color, c) for c in existing_colors])
+        if not max_distance or best_distance > max_distance:
+            max_distance = best_distance
+            best_color = color
+    return best_color
 
 
-#main window
-window = Tk()
-window.geometry("452x540")
+def shapes_gen(num_shapes):
+    shapes = []
 
-#GUI frame skeleton
-top_frame = Frame(window)
-top_frame.pack(fill=BOTH, side=TOP)
+    for x in range(0, num_shapes):
+        points = []
 
-mid_frame = Frame(window)
-mid_frame.pack(fill=BOTH)
+        for y in range(0, 2*x + 6):
+            rand_int = random.randint(20, 120)
+            points.append(rand_int)
 
-bottom_frame = Canvas(window)
-bottom_frame.pack(fill=X, side=BOTTOM)
+        shapes.append(points)
+    return shapes
 
-#GUI widgets
 
-top_label = Label(top_frame, text="The SEXY Tic Tak Toe...", bg="black", fg="white")
-top_label.pack(fill=X)
+def colors_gen(num_colors):
+    colors = []
 
-my_font = Font(family="Helvetica", size=60)
+    for x in range(0, num_colors):
+        color = generate_new_color(colors)
+        hex_color = None
+        for y in range(0, 3):
+            hex_color = hex(color[y])
+            print(hex_color)
+        colors.append(color)
+    return colors
 
-grid_canvas = Canvas(mid_frame)
-grid_canvas.place()
 
-for x in range(0, game_rows):
-    for y in range(0, game_columns):
-        button = Button(mid_frame, width=3, height=0, state=DISABLED, font=my_font, bg="white", disabledforeground="white", text=str(x)+str(y))
-        button.grid(row=x, column=y, sticky=NSEW)
-        button.bind('<Button-1>', button_press)
-        game_array[x][y] = button
+class TttGame:
+    def __init__(self, game_rows, game_columns, player, colors=["red", "green", "blue", "orange", "purple", "pink", "yellow", "indigo", "violet"]):
+        self.num_players = player
 
+        self.game_rows = game_rows
+        self.game_columns = game_columns
+
+        self.player_shapes = []
+        self.player_colors = colors
+
+        self.curr_player = -1
+
+        self.tk = GameGUI(self)
+
+    def start_game(self, event):
+        event.widget.pack_forget()
+
+        self.player_shapes = shapes_gen(self.num_players)
+        # self.player_colors = colors_gen(self.num_players)
+
+        for x in range(0, self.game_rows):
+            for y in range(0, self.game_columns):
+                self.tk.game_array[x][y].delete("all")
+                self.tk.game_array[x][y].config(state=NORMAL)
+        self.tk.top_label.config(text="Looking for a player")
+
+        # call client to get start game:
+        #   get label and get curr_player value
+
+        self.status_change()
+
+    def quit_game(self, event):
+        sys.exit()
+
+    def status_change(self):
+        self.curr_player = self.curr_player + 1
+        self.tk.top_label.config(text="Opponents's turn...")
+        if self.curr_player == self.num_players or self.curr_player == 0:
+            self.curr_player = 0
+            self.tk.top_label.config(text="Your turn...")
+
+    def toggle_buttons(self):
+        if self.curr_player == 0:
+            for x in range(0, self.game_rows):
+                for y in range(0, self.game_columns):
+                    if self.game_array[x][y]["text"].length == 2:
+                        self.tk.game_array[x][y].config(state=NORMAL)
+        else:
+            for x in range(0, self.game_rows):
+                for y in range(0, self.game_columns):
+                    self.tk.game_array[x][y].config(state=DISABLED)
+
+<<<<<<< HEAD
 button_start = Button(bottom_frame, text="New game.py", fg="green")
 button_start.bind("<Button-1>", start_game)
 button_start.pack(fill=X)
+=======
+    def button_press(self, event):
+        # send data to server
+>>>>>>> ce207a52ea0bdd8679aa36c2dcbba7bcc6162c84
 
-button_quit = Button(bottom_frame, text="Quit/Close", fg="red")
-button_quit.bind("<Button-1>", quit_game)
-button_quit.pack(fill=X)
+        if event.widget["state"] == NORMAL:
+            print(int(event.widget["width"])-140 + int(event.widget["height"])-140)
 
-window.mainloop()
+            event.widget.config(state=DISABLED)
+            event.widget.create_polygon(self.player_shapes[self.curr_player], fill=self.player_colors[self.curr_player])
+
+            # self.toggle_buttons()
+
+            self.status_change()
+
+
+class GameGUI:
+    def __init__(self, main):
+        self.game = main
+        self.window = Tk()
+        self.top_label = Label(self.window, text="The SEXY Tic Tak Toe...", bg="#ffcccc", font=28)
+
+        self.my_font = Font(family="Helvetica", size=60)
+
+        self.grid_frame = Frame(self.window)
+
+        self.button_start = Button(self.window, text="New game", fg="green")
+        self.button_quit = Button(self.window, text="Quit/Close", fg="red")
+
+        self.game_array = [[0 for x in range(self.game.game_rows)] for y in range(self.game.game_columns)]
+
+    def build_game(self):
+        self.window.geometry("495x540")
+        self.window.update()
+        self.window.minsize(int(self.window.winfo_width()*self.game.game_columns/3), int(self.window.winfo_height()*self.game.game_rows/3))
+
+        self.window.config(background="#ffcccc")
+
+        self.top_label.place(relx=0.5, rely=0.05, anchor=CENTER)
+        self.grid_frame.place(relx=0.5, rely=0.5, anchor=CENTER)
+
+        for x in range(0, self.game.game_rows):
+            for y in range(0, self.game.game_columns):
+                canvas = Canvas(self.grid_frame, width=140+x, height=140+y, state=DISABLED, bg="white")
+                canvas.grid(row=x, column=y)
+                canvas.bind('<Button-1>', self.game.button_press)
+                self.game_array[x][y] = canvas
+
+        self.button_start.bind("<Button-1>", self.game.start_game)
+        self.button_start.place(relx=0.5, rely=0.92, anchor=CENTER)
+
+        self.button_quit.bind("<Button-1>", self.game.quit_game)
+        self.button_quit.place(relx=0.5, rely=0.97, anchor=CENTER)
+
+        self.window.mainloop()
+
+
+# variables
+game_row = 5
+game_column = 5
+players = 3
+
+game = TttGame(game_row, game_column, players)
+game.tk.build_game()
