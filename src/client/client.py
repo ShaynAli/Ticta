@@ -1,24 +1,47 @@
 ''' client.py - Deals with a game client '''
 import socket
-sys.path.append('..')
-from common.constants import SERVER_HOST, SERVER_PORT, CLIENT_PORT_RANGE
 
 
 class Client:
-    ''' A class for the client to communicate with the server '''
 
-    def __init__(self, buffer_size=1024):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    EXIT_MSG = 'done'
+
+    def __init__(self, verbose=True, buffer_size=1024):
+        self.socket = socket.socket()
         self.buffer_size = buffer_size
 
-    def connect(self, host, port):
-        self.socket.connect((host, port))
+    def connect(self, address):
+        print('Attempting to connect to ' + str(address))
+        try:
+            self.socket.connect(address)
+        except Exception as e:
+            print('Unable to connect')
+            raise e
+        print('Connected to ' + str(address))
+        print('Type ' + Client.EXIT_MSG + ' to exit at any time')
 
-    def send(self, data):
-        self.socket.send(str(data).encode())
+    def play(self):
+        try:
+            out_msg = input('Send to server: ')
+            while out_msg and out_msg != Client.EXIT_MSG:
+                self.send(out_msg)  # Only if a message is sent
+                out_msg = input('Send to server: ')
+        except EOFError:
+            print('Exiting')
+            self.socket.close()
+            # self.socket.shutdown()
+
+    def send(self, msg):
+        try:
+            self.socket.send(msg.encode())
+        except EOFError as e:
+            raise e
+        except Exception as e:
+            print('Unable to send, ensure you\'re connected before sending')
+            print(e)
 
     def receive(self):
-        self.socket.recv(self.buffer_size)
-
-    def disconnect(self):
-        self.socket.close()
+        try:
+            return self.socket.recv(self.buffer_size).decode()
+        except ConnectionAbortedError:
+            print('Server disconnected')
