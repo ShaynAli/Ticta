@@ -37,26 +37,24 @@ def shapes_gen(num_shapes):
         for y in range(0, 2*x + 6):
             rand_int = random.randint(20, 120)
             points.append(rand_int)
-
         shapes.append(points)
     return shapes
 
 
 def colors_gen(num_colors):
     colors = []
-
+    hex_colors = []
     for x in range(0, num_colors):
         color = generate_new_color(colors)
-        hex_color = None
-        for y in range(0, 3):
-            hex_color = hex(color[y])
-            print(hex_color)
         colors.append(color)
-    return colors
+        for y in range(0, 3):
+            color[y] = (color[y]*255)
+        hex_colors.append('#%02x%02x%02x' % (int(color[0]), int(color[1]), int(color[2])))
+    return hex_colors
 
 
 class TttGame:
-    def __init__(self, game_rows, game_columns, player, colors=["red", "green", "blue", "orange", "purple", "pink", "yellow", "indigo", "violet"]):
+    def __init__(self, game_rows = 3, game_columns = 3, player = 2, colors=["red", "green", "blue", "orange", "purple", "pink", "yellow", "indigo", "violet"]):
         self.num_players = player
 
         self.game_rows = game_rows
@@ -73,7 +71,7 @@ class TttGame:
         event.widget.pack_forget()
 
         self.player_shapes = shapes_gen(self.num_players)
-        # self.player_colors = colors_gen(self.num_players)
+        self.player_colors = colors_gen(self.num_players)
 
         for x in range(0, self.game_rows):
             for y in range(0, self.game_columns):
@@ -163,9 +161,5 @@ class GameGUI:
 
 
 # variables
-game_row = 5
-game_column = 5
-players = 3
-
-game = TttGame(game_row, game_column, players)
+game = TttGame()
 game.tk.build_game()
