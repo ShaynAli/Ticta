@@ -35,7 +35,7 @@ def generate_new_decimal(existing_colors, pastel_factor=0.5):
     return best_color
 
 
-def shapes_gen(num_shapes):
+def shapes_gen(num_shapes, min, max):
     '''
     :param num_shapes: Type: int
     :return: returns array or co-ordinates: [x1, y1, x2, y2 ...]
@@ -46,37 +46,38 @@ def shapes_gen(num_shapes):
 
     for x in range(0, num_shapes):
         points = []
-        point = [] # Thi is just to compare the distance of last added co-ordinates with other
+        point = []  # Thi is just to compare the distance of last added co-ordinates with other
 
         for y in range(0, 2*x + 6):
-            enough_distance = False
+            not_enough_distance = True
 
-            while not enough_distance:
-
+            while not_enough_distance:
+                not_enough_distance = False
                 # Generate random point
-                rand_int = random.randint(20, 120)
+                rand_int = random.randint(min, max)
                 points.append(rand_int)
 
-                if y > 1:
+                if y > 1 and x == 2:
                     # only append if 1 co-ordinate present in points array
                     point.append(rand_int)
 
-                if len(point) == 2: # when one full co-ordinate is present in point array
+                if len(point) == 2:  # when one full co-ordinate is present in point array
 
                     for z in range(0, len(points) - 3):
                         # measure the distance for all points
                         distance = math.sqrt(pow(points[z] - point[0], 2) + pow(points[z+1] - point[1], 2))
 
-                        if distance > 20:
-                            enough_distance = True
+                        if distance < (max - min)/5:
+                            not_enough_distance = True
+                            break
 
-                    if not enough_distance:
-                        # delete last co-ordinate if distance is not enough
+                    if not_enough_distance:
+                        # delete last point if distance is not enough
                         points.pop()
-                        points.pop()
-                    point.clear()
-                else:
-                    break
+
+                        point.pop()
+                    else:
+                        point.clear()
 
         shapes.append(points)
     return shapes
@@ -99,7 +100,7 @@ def colors_gen(num_colors):
 
 
 class TttGame:
-    def __init__(self, shape_generator, color_generator, game_rows=3, game_columns=3, players=2, gui_cell_size=140):
+    def __init__(self, shape_generator, color_generator, game_rows=10, game_columns=10, players=100, gui_cell_size=70):
         '''
         Game GUI manipulator
         :param shape_generator: Type: function, Args: # of shapes to be generated, Returns array of co-ordinates
@@ -128,7 +129,7 @@ class TttGame:
     def start_game(self, event):
         self.tk.show_new_game_button(False)
 
-        self.player_shapes = self.shape_gen(self.num_players)
+        self.player_shapes = self.shape_gen(self.num_players, int(self.gui_cell_size/7), int(self.gui_cell_size*6/7))
         self.player_colors = self.color_gen(self.num_players)
 
         self.tk.initialize()
