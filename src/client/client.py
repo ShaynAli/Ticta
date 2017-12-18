@@ -1,5 +1,6 @@
 ''' client.py - Deals with a game client '''
 import socket
+from ast import literal_eval
 
 
 class Client:
@@ -29,9 +30,10 @@ class Client:
         except EOFError:
             print('Exiting')
             self.socket.close()
-            # self.socket.shutdown()
 
     def send(self, msg):
+        if not msg:
+            return
         try:
             self.socket.send(msg.encode())
         except EOFError as e:
@@ -43,5 +45,5 @@ class Client:
     def receive(self):
         try:
             return self.socket.recv(self.buffer_size).decode()
-        except ConnectionAbortedError:
+        except(ConnectionAbortedError, EOFError):
             print('Server disconnected')
