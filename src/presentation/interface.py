@@ -1,5 +1,4 @@
-from tkinter import *
-from tkinter.font import Font
+from threadsafe_tkinter import *
 import math
 import string
 from threading import Thread
@@ -192,8 +191,6 @@ class TTTGUI:
         self.top_label = Label(self.window, text="The SEXY Tic Tak Toe...", bg="#ffcccc", font=28)
         self.message = Label(self.window, text="Message", bg="#ffcccc", font=28)
 
-        self.my_font = Font(family="Helvetica", size=60)
-
         self.grid_frame = Frame(self.window)
 
         self.button_start = Button(self.window, text="New game", fg="green")
@@ -206,6 +203,8 @@ class TTTGUI:
         # non GUI variables
 
         self.players = {}
+
+        self.run = True
 
         self.build_gui()
 
@@ -242,16 +241,20 @@ class TTTGUI:
         self.button_quit.bind("<Button-1>", self.__quit)
         self.button_quit.place(relx=0.5, rely=0.97, anchor=CENTER)
 
-    def run(self):
-        self.window.mainloop()
+    def start(self):
+        while self.run:
+            self.update()
+
+    def update(self):
+        self.window.update()
 
     def initialize(self, event):
         for x in range(0, self.rows):
             for y in range(0, self.columns):
                 self.game_array[x][y].delete("all")
-        self.window.mainloop()
-
         self.new_game()
+
+    # def change_gui(self):
 
     @abstractmethod
     def new_game(self):
@@ -265,11 +268,12 @@ class TTTGUI:
         pass
 
     def __quit(self, event):
+        self.run = False
         self.quit()
 
     @abstractmethod
     def quit(self):
-        sys.exit()
+        pass
 
     def __move(self, event):
         x = (event.widget["highlightcolor"])[1]
@@ -328,16 +332,61 @@ class TTTGUI:
         self.button_disconnect.place(relx=0.5, rely=0.92, anchor=CENTER)
 
 
-# def test():
-#     time.sleep(1)
-#     p = ['1', '2', '3', '4', '5']
-#     game.set_players(p)
-#     game.set_board(0, 0, '3')
-#     game.set_board(0, 0, '2')
-#     game.set_board(0, 0, '4')
+# def test(game):
+#     game.set_message('ksdjnfsdm,f')
 #
+# def gui(func):
+#     t = T2(func)
+#     t.get_gui()
+
+
+# class Test(TTTGUI):
 #
-# game = TTTGUI()
-# th = Thread(target=test)
-# th.start()
-# game.run()
+#     def new_game(self):
+#         print('playing')
+#
+#     def move(self, row, col):
+#         print(row, col)
+#
+#     def quit(self):
+#         pass
+#
+#     def disconnect(self):
+#         pass
+
+# class T2:
+#     def __init__(self, func):
+#         self.gui = Test()
+#         self.func = func
+#         self.gui.run()
+#
+#     def get_gui(self):
+#         self.func(self.gui)
+
+# def func():
+#     pass
+#
+# # game = Test()
+# # gui_thread = Thread(target=game_2.new_game)
+# # gui_thread.start()
+# # print('Other cmd')
+# # gui_thread_2 = Thread(target=game_2.move())
+# # gui_thread_2.start()
+#
+# # th = Thread(target=game.start)
+# # th.start()
+# # game.start()
+#
+# g = None
+#
+# def run_g(g):
+#     g = TTTGUI()
+#     g.start()
+#
+# run_g(g)
+#
+# print('Running')
+# print(str(g))
+
+
+
