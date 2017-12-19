@@ -173,7 +173,7 @@ def colors_gen(num_colors):
 
 
 class TTTGUI:
-    
+
     def __init__(self, size=3):
         '''
         GUI builder for tic tac toe
@@ -266,6 +266,12 @@ class TTTGUI:
     def quit(self, event):
         sys.exit()
 
+    def __move(self, event, row, col):
+        # TODO
+        # Do GUI stuff for move
+        # self.move(row, col)
+        pass
+
     @abstractmethod
     def move(self, event, row, col):
         pass
@@ -320,6 +326,8 @@ def test():
     p = ['1', '2', '3', '4', '5']
     game.set_players(p)
     game.set_board(0, 0, '3')
+    game.set_board(0, 0, '2')
+    game.set_board(0, 0, '4')
 
 
 game = TTTGUI()

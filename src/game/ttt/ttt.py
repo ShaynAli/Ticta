@@ -24,10 +24,21 @@ class TTTClient(ActionClient, TTTGUI):
                 self.log('Connected')
             sleep(self.frequency)
 
+    def new_game(self, event):
+        pass
+
+    def move(self, event, row, col):
+        pass
+
+    def quit(self, event):
+        pass
+
+
+GAME_PORT = 12000
+
 
 class TTTServer(ActionServer):
 
     def __init__(self, port):
         super().__init__(port)
-
 
