@@ -16,9 +16,10 @@ EXIT = 'exit'
 class ActionClient:
     ''' Instances of Client should be run only on a client's machine and are not a part of the server '''
 
-    def __init__(self, buffer_size=1024):
+    def __init__(self, buffer_size=1024, verbosity=0):
         self.socket = socket.socket()
         self.buffer_size = buffer_size
+        self.verbosity = verbosity
         self.disconnected = False
         self.action_tree = {
             OPTIONS: self.send_options,
@@ -53,7 +54,7 @@ class ActionClient:
     # Action management
 
     # An action is of the form (action_word, **kwargs)
-    def action(self, act_msg):
+    def process_action(self, act_msg):
         act_word, kwargs = literal_eval(act_msg)
         act_func = self.action_tree[act_word]
         act_func(**kwargs)
@@ -71,7 +72,7 @@ class ActionClient:
             self.log('Unable to connect')
             raise e
         self.log('Connected to ' + str(address))
-        self.log('Type ' + ActionClient.EXIT_MSG + ' to exit at any time')
+        self.log('Type ' + EXIT + ' to exit at any time')
 
     def send(self, msg):
         if not msg:  # Don't send empty messages
@@ -90,7 +91,7 @@ class ActionClient:
         except(ConnectionAbortedError, EOFError):
             self.log('Server disconnected')
 
-    def log(self, msg, level=0):
+    def log(self, msg, level=100):
         if level <= self.verbosity:
             print(msg)
 
@@ -169,7 +170,6 @@ class ActionServer:
 
         # Client management
 
-        @abstractmethod
         def play(self):
             ''' Deal with the client's actions '''
             while not self.disconnected:
