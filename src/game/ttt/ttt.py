@@ -3,6 +3,7 @@ from threading import Thread
 from time import sleep
 import string
 from random import shuffle
+from itertools import cycle
 sys.path.append('..\..')
 from abstracts.action import ActionServer, ActionClient, ClientThread
 from presentation.interface import TTTGUI
@@ -132,7 +133,7 @@ class TTTServer(ActionServer):
         while not (win or tie):
             self.current_player = players.__next__()
             self.disp_all_board()  # TODO: Remove
-            self.disp_all('Player ' + self.symbol[player] + '\'s turn')  # TODO: Change to set message
+            self.disp_all('Player ' + self.symbol[self.current_player] + '\'s turn')  # TODO: Change to set message
             win = self.check_win(self.current_player, *self.turn(self.current_player))
             tie = self.check_tie()
         if win:
