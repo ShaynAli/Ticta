@@ -138,22 +138,67 @@ class ActionClient(ActionSocket):
     def play(self):
         ''' Run the client '''
 
+class ClientThread(ActionSocket, Thread):
+
+    def __init__(self, server, socket, address, frequency=0.01, buffer_size=1024, verbosity=0):
+        ActionSocket.__init__(self, frequency=frequency, buffer_size=buffer_size, verbosity=verbosity)
+        Thread.__init__(self)
+        self.server = server
+        # Set connection manually
+        self.socket = socket
+        self.address = address
+        self.connected = True
+        # Set up action tree
+        self.action_tree = {
+            OPTIONS: self.send_options,
+            REPLY: self.reply,
+            ECHO: self.echo,
+            EXIT: self.client_exit,
+        }
+        self.thread_no = ActionServer.client_no.__next__()
+        self.log('Created at ' + str(address))
+
+    # Overriding Thread.run, do not rename
+    def run(self):
+        self.listen4action()
+
+    # Actions
+
+    def send_options(self):
+        self.send(str(self.action_tree.keys()))
+
+    def reply(self):
+        self.send('This is a reply from the server, you are connected at  ' + self.address)
+
+    def echo(self, msg):
+        self.send(msg)
+
+    def client_exit(self):
+        self.log('Client ended connection')
+        self.connected = False
+        self.socket.close()
+
+    def log(self, msg, level=0):
+        super().log('Client ' + str(self.thread_no) + '\t' + msg, level)
+
+
 
 class ActionServer(Logger):
     ''' Runs the server and deals with clients '''
 
     client_no = (i for i in count())
 
-    def __init__(self, port, frequency=0.01, backlog=32, verbosity=0):
+    def __init__(self, port, client_type=ClientThread, frequency=0.01, backlog=32, verbosity=0):
         super().__init__(verbosity=verbosity)
+        self.client_type = client_type
         self.output_free = True
         self.frequency = frequency
-        self.log('Starting server')
         self.port = port
         self.backlog = backlog
         self.socket = socket.socket()
-        self.online = True
         self.action_tree = {}
+        self.log('Starting server')
+        self.online = True
         self.console_thread = Thread(target=self.listen4console)
         self.listen_thread = Thread(target=self.listen4client)
         self.clients = set()
@@ -204,54 +249,10 @@ class ActionServer(Logger):
             try:
                 client_socket, client_address = self.socket.accept()
                 self.log('Accepted connection at ' + str(client_address))
-                client = ActionServer.ClientThread(self, client_socket, client_address)
+                client = self.client_type(server=self, socket=client_socket, address=client_address)
                 client.start()
                 self.clients.add(client)
             except OSError:
                 self.log('Listening socket closed')
             except Exception as e:
                 self.log_error(e)
-
-    class ClientThread(ActionSocket, Thread):
-
-        def __init__(self, server, socket, address, frequency=0.01, buffer_size=1024, verbosity=0):
-            ActionSocket.__init__(self, frequency=frequency, buffer_size=buffer_size, verbosity=verbosity)
-            Thread.__init__(self)
-            # super().__init__()
-            self.server = server
-            # Connected manually
-            self.socket = socket
-            self.address = address
-            self.connected = True
-            # Set up action tree
-            self.action_tree = {
-                OPTIONS: self.send_options,
-                REPLY: self.reply,
-                ECHO: self.echo,
-                EXIT: self.client_exit,
-            }
-            self.thread_no = ActionServer.client_no.__next__()
-            self.log('Created at ' + str(address))
-
-        # # Overriding Thread.run, do not rename
-        # def run(self):
-        #     self.listen4action()
-
-        # Actions
-
-        def send_options(self):
-            self.send(str(self.action_tree.keys()))
-
-        def reply(self):
-            self.send('This is a reply from the server, you are connected at  ' + self.address)
-
-        def echo(self, msg):
-            self.send(msg)
-
-        def client_exit(self):
-            self.log('Client ended connection')
-            self.connected = False
-            self.socket.close()
-
-        def log(self, msg, level=0):
-            super().log('Client ' + str(self.thread_no) + '\t' + msg, level)
