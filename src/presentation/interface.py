@@ -224,21 +224,22 @@ class TTTGUI:
 
         for x in range(0, self.rows):
             for y in range(0, self.columns):
-                canvas = Canvas(self.grid_frame, width=self.cell_size, height=self.cell_size, bg="white")
+                canvas = Canvas(self.grid_frame, width=self.cell_size, height=self.cell_size, bg="white", highlightcolor='#'+str(x)+str(y)+'0')
                 canvas.grid(row=x, column=y)
+                canvas.bind('<Button-1>', self.__move)
                 self.game_array[x][y] = canvas
 
-                button = Button(self.game_array[x][y], width=int(self.cell_size / 7), height=int(self.cell_size / 15),
-                                text=str(x) + str(y), fg="white", disabledforeground="white", bg="white")
-                button.bind('<Button-1>', self.move)
-                self.button_array[x][y] = button
+                # button = Button(self.game_array[x][y], width=int(self.cell_size / 7), height=int(self.cell_size / 15),
+                #                 text=str(x) + str(y), fg="white", disabledforeground="white", bg="white")
+                # button.bind('<Button-1>', self.__move)
+                # self.button_array[x][y] = button
 
         self.button_start.bind("<Button-1>", self.initialize)
         self.button_start.place(relx=0.5, rely=0.92, anchor=CENTER)
 
-        self.button_disconnect.bind("<Button-1>", self.disconnect)
+        self.button_disconnect.bind("<Button-1>", self.__disconnect)
 
-        self.button_quit.bind("<Button-1>", self.quit)
+        self.button_quit.bind("<Button-1>", self.__quit)
         self.button_quit.place(relx=0.5, rely=0.97, anchor=CENTER)
 
     def run(self):
@@ -248,32 +249,36 @@ class TTTGUI:
         for x in range(0, self.rows):
             for y in range(0, self.columns):
                 self.game_array[x][y].delete("all")
-
-                self.button_array[x][y].pack()
         self.window.mainloop()
 
-        self.new_game(event)
+        self.new_game()
 
     @abstractmethod
-    def new_game(self, event):
+    def new_game(self):
         pass
 
-    @abstractmethod
-    def disconnect(self, event):
-        pass
+    def __disconnect(self, event):
+        self.disconnect()
 
     @abstractmethod
-    def quit(self, event):
+    def disconnect(self):
+        pass
+
+    def __quit(self, event):
+        self.quit()
+
+    @abstractmethod
+    def quit(self):
         sys.exit()
 
-    def __move(self, event, row, col):
-        # TODO
-        # Do GUI stuff for move
-        # self.move(row, col)
-        pass
+    def __move(self, event):
+        x = (event.widget["highlightcolor"])[1]
+        y = (event.widget["highlightcolor"])[2]
+
+        self.move(x, y)
 
     @abstractmethod
-    def move(self, event, row, col):
+    def move(self, row, col):
         pass
 
     def set_players(self, players):
@@ -283,21 +288,22 @@ class TTTGUI:
             dic = {'Shape': shapes[i], 'Color': colors[i]}
             self.players[(players[i])] = dic
 
-    def disable_grid_state(self):
-        for x in range(0, self.rows):
-            for y in range(0, self.columns):
-                self.button_array[x][y].config(state=DISABLED)
+    # def disable_grid_state(self):
+    #     for x in range(0, self.rows):
+    #         for y in range(0, self.columns):
+    #             self.button_array[x][y].config(state=DISABLED)
+    #
+    # def enable_grid_state(self):
+    #     for x in range(0, self.rows):
+    #         for y in range(0, self.columns):
+    #             self.button_array[x][y].config(state=NORMAL)
 
     def set_board(self, row, col, player):
-        self.button_array[row][col].pack_forget()
-        print(self.players[player]['Shape'])
-        print(self.players[player]['Color'])
+        #self.button_array[row][col].pack_forget()
         self.game_array[row][col].create_polygon(self.players[player]['Shape'], fill=self.players[player]['Color'])
 
-    def enable_grid_state(self):
-        for x in range(0, self.rows):
-            for y in range(0, self.columns):
-                self.button_array[x][y].config(state=NORMAL)
+    def clear_board(self, row, col):
+        self.game_array[row][col].delete('all')
 
     def set_title(self, text):
         self.top_label.config(text=text)
@@ -323,6 +329,7 @@ class TTTGUI:
 
 
 def test():
+    time.sleep(1)
     p = ['1', '2', '3', '4', '5']
     game.set_players(p)
     game.set_board(0, 0, '3')
