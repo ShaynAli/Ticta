@@ -219,7 +219,7 @@ class TicTacToeServer:
                                  ' for the column number: ')) - 1
 
 
-class TicTacToeClient:
+class TicTacToeClient:  # TODO
 
     def __init__(self):
         pass
