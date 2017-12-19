@@ -138,6 +138,7 @@ class ActionClient(ActionSocket):
     def play(self):
         ''' Run the client '''
 
+
 class ClientThread(ActionSocket, Thread):
 
     def __init__(self, server, socket, address, frequency=0.01, buffer_size=1024, verbosity=0):
@@ -180,7 +181,6 @@ class ClientThread(ActionSocket, Thread):
 
     def log(self, msg, level=0):
         super().log('Client ' + str(self.thread_no) + '\t' + msg, level)
-
 
 
 class ActionServer(Logger):

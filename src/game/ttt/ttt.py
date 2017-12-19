@@ -15,10 +15,11 @@ QUIT = 'quit'
 
 SET_TITLE = 'set-title'
 SET_MSG = 'set-msg'
+SET_PLAYERS = 'set-players'
 
-PROMPT = 'prompt'
-GET_ROW = 'get-row'
-GET_COL = 'get-col'
+# PROMPT = 'prompt'
+# GET_ROW = 'get-row'
+# GET_COL = 'get-col'
 
 
 class TTTClient(ActionClient, TTTGUI):
@@ -27,40 +28,32 @@ class TTTClient(ActionClient, TTTGUI):
         ActionClient.__init__(self)
         TTTGUI.__init__(self)
         self.action_tree = {
-            NEW_GAME: ' ',
-            MOVE: ' ',
-            DISCONNECT: ' ',
-            QUIT: ' ',
+            SET_MSG: self.set_message,
+            SET_TITLE: self.set_title,
+            SET_PLAYERS: self.set_players,
         }
         self.running = False
         self.output_free = True
 
     def run_gui(self):
-        # Eat the babies like the terrible pos library that you are
         self.running = True
+        self.log('GUI running')
         self.start()
 
     def play(self):
         self.log('Playing')
-        listen_thread = Thread(target=self.listen4action)
-        listen_thread.start()
+        action_in_thread = Thread(target=self.listen4action)
+        action_in_thread.start()
         game_thread = Thread(target=self.game_loop)
         game_thread.start()
-        self.run_gui()  # This call eats babies (you can't do anything after this call)
-
-    def keep_printing(self):
-        while True:
-            sleep(1)
-            self.log('dumb')
+        self.run_gui()  # This call eats babies
 
     def game_loop(self):
         while not self.running:
             sleep(self.frequency)
-        self.set_message('RUNNING - RUNNING - RUNNING - RUNNING - RUNNING - RUNNING - RUNNING')
-        self.log('RUNNING')
+        self.log('Game running')
         while self.connected:
-            self.log('Running')
-            sleep(5)
+            sleep(self.frequency)
 
     def new_game(self):
         self.log('N')
@@ -272,10 +265,9 @@ class TTTServer(ActionServer):
 
 class TTTClientThread(ClientThread):
 
-    def __init__(self, server, socket, address, frequency=0.01, buffer_size=1024, verbosity=0):
+    def __init__(self, server, socket, address, players, frequency=0.01, buffer_size=1024, verbosity=0):
         ClientThread.__init__(self, server, socket, address,
                               frequency=frequency, buffer_size=buffer_size, verbosity=verbosity)
-        self.server=TTTServer([])  # TODO: COMMENT OUT BEFORE RUNNING ==================================================
         self.action_tree = {  # TODO: Implement
             NEW_GAME: self.new_game,
             MOVE: self.move,
@@ -292,6 +284,9 @@ class TTTClientThread(ClientThread):
     def disconnect(self):
         pass
         # self.server.end_game('Player disconnected')  # TODO: Implement
+
+    def send_players(self, players):
+        self.send_action(SET_PLAYERS, players=players)
 
     def quit(self):
         pass  # TODO
