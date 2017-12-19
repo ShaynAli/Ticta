@@ -3,10 +3,10 @@ from threading import Thread
 from time import sleep
 sys.path.append('..\..')
 from abstracts.action import ActionServer, ActionClient
-from presentation.interface import TTTInterface
+from presentation.interface import TTTGUI
 
 
-class TTTClient(ActionClient):
+class TTTClient(ActionClient, TTTGUI):
 
     def __init__(self):
         super().__init__()

@@ -172,7 +172,8 @@ def colors_gen(num_colors):
 #         return shape, color
 
 
-class GameGUI:
+class TTTGUI:
+    
     def __init__(self, size=3):
         '''
         GUI builder for tic tac toe
@@ -321,7 +322,7 @@ def test():
     game.set_board(0, 0, '3')
 
 
-game = GameGUI()
+game = TTTGUI()
 th = Thread(target=test)
 th.start()
 game.run()
