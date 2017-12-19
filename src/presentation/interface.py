@@ -328,16 +328,16 @@ class TTTGUI:
         self.button_disconnect.place(relx=0.5, rely=0.92, anchor=CENTER)
 
 
-def test():
-    time.sleep(1)
-    p = ['1', '2', '3', '4', '5']
-    game.set_players(p)
-    game.set_board(0, 0, '3')
-    game.set_board(0, 0, '2')
-    game.set_board(0, 0, '4')
-
-
-game = TTTGUI()
-th = Thread(target=test)
-th.start()
-game.run()
+# def test():
+#     time.sleep(1)
+#     p = ['1', '2', '3', '4', '5']
+#     game.set_players(p)
+#     game.set_board(0, 0, '3')
+#     game.set_board(0, 0, '2')
+#     game.set_board(0, 0, '4')
+#
+#
+# game = TTTGUI()
+# th = Thread(target=test)
+# th.start()
+# game.run()
