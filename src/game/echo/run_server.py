@@ -1,4 +1,4 @@
 from echo import Server
 
 server = Server()
-server.listen()
+server.listen4client()

@@ -6,6 +6,7 @@ from time import sleep
 from ast import literal_eval
 from traceback import format_exception_only
 from abc import abstractmethod
+from subprocess import Popen, CREATE_NEW_CONSOLE
 
 OPTIONS = 'options'
 REPLY = 'reply'
@@ -13,43 +14,51 @@ ECHO = 'echo'
 EXIT = 'exit'
 
 
-class ActionClient:
-    ''' Instances of Client should be run only on a client's machine and are not a part of the server '''
+class Logger:
 
-    def __init__(self, buffer_size=1024, verbosity=0):
-        self.socket = socket.socket()
-        self.buffer_size = buffer_size
+    def __init__(self, verbosity=0):
         self.verbosity = verbosity
-        self.disconnected = False
-        self.action_tree = {
-            OPTIONS: self.send_options,
-            REPLY: self.reply,
-            ECHO: self.echo,
-            EXIT: self.exit,
-        }
 
-    # Actions
+    def log(self, msg, level=0):
+        if level <= self.verbosity:
+            print(msg)
 
-    def send_options(self):
-        self.send(str(self.action_tree.keys()))
+    def log_error(self, e, stack_trace=False):
+        if stack_trace:
+            self.log('\n'.join(format_exception_only(type(e), e)))
+        else:
+            self.log(repr(e))
 
-    def reply(self):
-        self.send('This is a reply from a client')
 
-    def echo(self, msg):
-        self.send(msg)
+class ActionSocket(Logger):
 
-    def exit(self):
-        self.log('Exiting')
-        self.send_action(EXIT)
-        self.socket.close()
-        self.disconnected = True
+    def __init__(self, frequency=0.01, buffer_size=1024, verbosity=0):
+        super().__init__(verbosity=verbosity)
+        self.socket = socket.socket()
+        self.frequency = frequency
+        self.buffer_size = buffer_size
+        self.connected = False
+        self.action_tree = {}
 
     # Client management
 
-    @abstractmethod
-    def play(self):
-        ''' Run the client '''
+    def listen4action(self):
+        ''' Deal with the incoming actions '''
+        while self.connected:
+            in_msg = self.receive()
+            if in_msg:
+                try:
+                    self.process_action(in_msg)
+                    self.log('Completed action: ' + in_msg)
+                except(SyntaxError, TypeError, KeyError, ValueError) as e:
+                    self.log('Received non-action message: ' + in_msg)
+                except Exception as e:
+                    raise e
+            else:
+                self.exit()
+            sleep(self.frequency)
+        # Disconnect
+        self.socket.close()
 
     # Action management
 
@@ -60,7 +69,7 @@ class ActionClient:
         act_func(**kwargs)
 
     def send_action(self, action_word, **kwargs):
-        self.send(str(action_word) + str(kwargs.items()))
+        self.send(str((action_word, kwargs)))
 
     # Socket management
 
@@ -68,86 +77,165 @@ class ActionClient:
         self.log('Attempting to connect to ' + str(address))
         try:
             self.socket.connect(address)
+            self.connected = True
         except Exception as e:
             self.log('Unable to connect')
             raise e
         self.log('Connected to ' + str(address))
-        self.log('Type ' + EXIT + ' to exit at any time')
+        action_listener = Thread(target=self.listen4action)
+        action_listener.start()
+
+    def disconnect(self):
+        self.connected = False
 
     def send(self, msg):
         if not msg:  # Don't send empty messages
             return
         try:
             self.socket.send(msg.encode())
-        except EOFError as e:
-            raise e
         except Exception as e:
-            self.log('Unable to send, ensure you\'re connected before sending')
-            self.log_error(e)
+            self.log('Unable to send')
+            self.log_error(e, stack_trace=False)
 
     def receive(self):
         try:
             return self.socket.recv(self.buffer_size).decode()
-        except(ConnectionAbortedError, EOFError):
-            self.log('Server disconnected')
-
-    def log(self, msg, level=100):
-        if level <= self.verbosity:
-            print(msg)
-
-    def log_error(self, e, log_stack_trace=False):
-        self.log('Encountered an error: ' + repr(e))
-        if log_stack_trace:
-            self.log('\n'.join(format_exception_only(type(e), e)))
+        except Exception as e:
+            self.log('Unable to receive')
+            self.log_error(e, stack_trace=False)
 
 
-class ActionServer:
+class ActionClient(ActionSocket):
+    ''' Instances of Client should be run only on a client's machine and are not a part of the server '''
+
+    def __init__(self, frequency=0.01, buffer_size=1024, verbosity=0):
+        super().__init__(frequency=frequency, buffer_size=buffer_size, verbosity=verbosity)
+        self.action_tree = {
+            OPTIONS: self.send_options,
+            REPLY: self.reply,
+            ECHO: self.echo,
+            EXIT: self.exit,
+        }
+
+    # Actions
+
+    def send_options(self):
+        self.send(str(*self.action_tree.keys()))
+
+    def reply(self):
+        self.send('This is a reply from a client')
+
+    def echo(self, msg):
+        self.send(msg)
+
+    def exit(self):
+        self.log('Exiting')
+        self.disconnect()
+
+    # Client management
+
+    @abstractmethod
+    def play(self):
+        ''' Run the client '''
+
+
+class ActionServer(Logger):
     ''' Runs the server and deals with clients '''
 
-    def __init__(self, port, backlog=32, verbosity=0):
-        self.verbosity = verbosity
+    client_no = (i for i in count())
+
+    def __init__(self, port, frequency=0.01, backlog=32, verbosity=0):
+        super().__init__(verbosity=verbosity)
+        self.output_free = True
+        self.frequency = frequency
         self.log('Starting server')
         self.port = port
         self.backlog = backlog
         self.socket = socket.socket()
         self.online = True
+        self.action_tree = {}
+        self.console_thread = Thread(target=self.listen4console)
+        self.listen_thread = Thread(target=self.listen4client)
+        self.clients = set()
 
-    def listen(self):
+    def listen4console(self):
+        while self.online:
+            while not self.output_free:
+                sleep(self.frequency)
+            try:
+                self.command(input())
+            except EOFError:
+                self.disconnect()
+
+    def command(self, cmd):
+        if cmd in {'exit', 'done', 'disconnect', 'offline'}:
+            self.disconnect()
+        elif cmd in {'online', 'listen'}:
+            self.listen_thread.start()
+        elif cmd in {'davin'}:
+            self.log('Something is happening')
+
+    def disconnect(self):
+        self.log('Going offline')
+        self.online = False
+        self.log('Disconnecting clients')
+        for c in self.clients:
+            c.connected = False
+            c.socket.close()
+            self.log('Disconnected client ' + str(c.thread_no))
+        self.socket.close()
+
+    def log(self, msg, level=0):
+        while not self.output_free:
+            sleep(self.frequency)
+        self.output_free = False
+        super().log('Server\t\t' + msg, level)
+        self.output_free = True
+
+    def log_error(self, e, stack_trace=True):
+        super().log_error(e, stack_trace=stack_trace)
+
+    def listen4client(self):
         listen_address = (socket.gethostname(), self.port)
         self.socket.bind(listen_address)
         self.socket.listen(self.backlog)
         self.log('Listening on ' + str(listen_address))
         while self.online:
-            client_socket, client_address = self.socket.accept()
-            self.log('Accepted connection at ' + str(client_address))
-            client = ActionServer.ClientThread(self, client_socket, client_address, self.verbosity // 2)
-            client.start()
+            try:
+                client_socket, client_address = self.socket.accept()
+                self.log('Accepted connection at ' + str(client_address))
+                client = ActionServer.ClientThread(self, client_socket, client_address)
+                client.start()
+                self.clients.add(client)
+            except OSError:
+                self.log('Listening socket closed')
+            except Exception as e:
+                self.log_error(e)
 
-    def log(self, msg, level=0):
-        if level <= self.verbosity:
-            print(msg)
-
-    class ClientThread(Thread):
-
-        thread_no = (i for i in count())
+    class ClientThread(ActionSocket, Thread):
 
         def __init__(self, server, socket, address, frequency=0.01, buffer_size=1024, verbosity=0):
+            ActionSocket.__init__(self, frequency=frequency, buffer_size=buffer_size, verbosity=verbosity)
+            Thread.__init__(self)
+            # super().__init__()
             self.server = server
-            super().__init__()
-            self.thread_no = ActionServer.ClientThread.thread_no.__next__()
+            # Connected manually
             self.socket = socket
             self.address = address
-            self.disconnected = False
-            self.frequency = frequency
-            self.buffer_size = buffer_size
-            self.verbosity = verbosity
-            self.log('ClientThread ' + str(self.thread_no) + ' created at ' + str(address))
+            self.connected = True
+            # Set up action tree
             self.action_tree = {
                 OPTIONS: self.send_options,
                 REPLY: self.reply,
                 ECHO: self.echo,
-                EXIT: self.exit,
+                EXIT: self.client_exit,
             }
+            self.thread_no = ActionServer.client_no.__next__()
+            self.log('Created at ' + str(address))
+
+        # # Overriding Thread.run, do not rename
+        # def run(self):
+        #     self.listen4action()
 
         # Actions
 
@@ -160,70 +248,10 @@ class ActionServer:
         def echo(self, msg):
             self.send(msg)
 
-        def exit(self):
+        def client_exit(self):
             self.log('Client ended connection')
-            self.disconnected = True
-
-        # Overriding Thread.run, do not rename
-        def run(self):
-            self.play()
-
-        # Client management
-
-        def play(self):
-            ''' Deal with the client's actions '''
-            while not self.disconnected:
-                in_msg = self.receive()
-                if in_msg:
-                    try:
-                        self.process_action(in_msg)
-                        self.log('Completed action: ' + in_msg)
-                    except(SyntaxError, TypeError, KeyError, ValueError) as e:
-                        self.log('Received non-action message: ' + in_msg)
-                    except Exception as e:
-                        raise e
-                else:
-                    self.exit()
-                sleep(self.frequency)
-            # Disconnect
+            self.connected = False
             self.socket.close()
 
-        # Action management
-
-        # An action is of the form (action_word, **kwargs)
-        def process_action(self, act_msg):
-            act_word, kwargs = literal_eval(act_msg)
-            act_func = self.action_tree[act_word]
-            act_func(**kwargs)
-
-        def send_action(self, action_word, **kwargs):
-            self.send(str(action_word) + str(kwargs.items()))
-
-        # Socket management
-
-        def send(self, msg):
-            if not msg:  # Don't send empty messages
-                return
-            try:
-                self.socket.send(msg.encode())
-            except Exception as e:
-                self.log('Unable to send to client')
-                self.log_error(e)
-
-        def receive(self):
-            try:
-                return self.socket.recv(self.buffer_size).decode()
-            except Exception as e:
-                self.log('Unable to receive from client')
-                self.log_error(e)
-
-        # Logging
-
         def log(self, msg, level=0):
-            if level <= self.verbosity:
-                print('ClientThread ' + str(self.thread_no) + ': ' + str(msg))
-
-        def log_error(self, e, log_stack_trace=False):
-            self.log('Encountered an error: ' + repr(e))
-            if log_stack_trace:
-                self.log('\n'.join(format_exception_only(type(e), e)))
+            super().log('Client ' + str(self.thread_no) + '\t' + msg, level)

@@ -6,33 +6,28 @@ from abstracts.action import ActionServer, ActionClient
 from presentation.interface import TTTInterface
 
 
-class TTTClient(ActionClient, TTTInterface):
+class TTTClient(ActionClient):
 
-    def __init__(self, listen_frequency=0.01):
+    def __init__(self):
         super().__init__()
-        self.listen_freq = listen_frequency
 
     def play(self):
+        self.log('Playing')
         # gui_thread = Thread(target=)
-        # listen_thread = Thread(target=)
+        listen_thread = Thread(target=self.listen4action)
         # send_thread = Thread(target=)
-        while not self.disconnected:
-            pass
-
-    def listen(self):
-        while not self.disconnected:
-            in_msg = self.receive()
-            if in_msg:
-                self.process_action(in_msg)
-            else:
-                self.exit()
-            sleep(self.listen_freq)
-        # Disconnect
-        self.socket.close()
+        listen_thread.start()
+        tick = 0
+        while self.connected:
+            i = tick % 10
+            if i:
+                self.log('Connected')
+            sleep(self.frequency)
 
 
 class TTTServer(ActionServer):
 
     def __init__(self, port):
         super().__init__(port)
+
 
