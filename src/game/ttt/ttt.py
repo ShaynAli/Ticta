@@ -21,47 +21,70 @@ GET_ROW = 'get-row'
 GET_COL = 'get-col'
 
 
-class TTTClient(ActionClient):
+class TTTClient(ActionClient, TTTGUI):
 
     def __init__(self):
         ActionClient.__init__(self)
+        TTTGUI.__init__(self)
         self.action_tree = {
             NEW_GAME: ' ',
             MOVE: ' ',
             DISCONNECT: ' ',
             QUIT: ' ',
         }
-        self.gui = None
+        self.running = False
+        self.output_free = True
 
     def run_gui(self):
-        self.gui = TTTGUI()
-        gui.run()
+        # Eat the babies like the terrible pos library that you are
+        self.running = True
+        self.start()
 
     def play(self):
         self.log('Playing')
-        self.run_gui()
         listen_thread = Thread(target=self.listen4action)
         listen_thread.start()
-        self.run_gui()
-        self.gui.set_message('sdfiuhskjfjsd')
-        # tick = 0
-        # while self.connected:
-        #     i = tick % 10
-        #     if i:
-        #         self.log('Connected')
-        #     sleep(self.frequency)
+        game_thread = Thread(target=self.game_loop)
+        game_thread.start()
+        self.run_gui()  # This call eats babies (you can't do anything after this call)
+
+    def keep_printing(self):
+        while True:
+            sleep(1)
+            self.log('dumb')
+
+    def game_loop(self):
+        while not self.running:
+            sleep(self.frequency)
+        self.set_message('RUNNING - RUNNING - RUNNING - RUNNING - RUNNING - RUNNING - RUNNING')
+        self.log('RUNNING')
+        while self.connected:
+            self.log('Running')
+            sleep(5)
 
     def new_game(self):
+        self.log('N')
         self.send_action(NEW_GAME)
 
     def move(self, row, col):
+        self.log('MV' + str((row, col)))
         self.send_action(MOVE, row=row, col=col)
 
     def quit(self):
-        self.send_action(QUIT)
+        self.log('Q')
+        # self.send_action(QUIT)
+        sys.exit()
 
     def disconnect(self):
+        self.log('DC')
         self.send_action(DISCONNECT)
+
+    def log(self, msg, level=0):
+        while not self.output_free:
+            sleep(self.frequency)
+        self.output_free = False
+        super().log(msg, level)
+        self.output_free = True
 
 
 class TTTServer(ActionServer):
@@ -272,5 +295,3 @@ class TTTClientThread(ClientThread):
 
     def quit(self):
         pass  # TODO
-
-
