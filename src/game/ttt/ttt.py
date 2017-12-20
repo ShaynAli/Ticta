@@ -17,6 +17,7 @@ QUIT = 'quit'
 SET_TITLE = 'set-title'
 SET_MSG = 'set-msg'
 SET_PLAYERS = 'set-players'
+SET_BOARD = 'set-board'
 
 # PROMPT = 'prompt'
 # GET_ROW = 'get-row'
@@ -32,6 +33,7 @@ class TTTClient(ActionClient, TTTGUI):
             SET_MSG: self.set_message,
             SET_TITLE: self.set_title,
             SET_PLAYERS: self.set_players,
+            SET_BOARD: self.set_board,
         }
         self.running = False
         self.output_free = True
@@ -57,20 +59,22 @@ class TTTClient(ActionClient, TTTGUI):
             sleep(self.frequency)
 
     def new_game(self):
-        self.log('N')
+        self.log('Attempting to start new game')
         self.send_action(NEW_GAME)
 
     def move(self, row, col):
-        self.log('MV' + str((row, col)))
+        self.log('Attempting move at ' + str((row, col)))
         self.send_action(MOVE, row=row, col=col)
 
     def quit(self):
-        self.log('Q')
-        # self.send_action(QUIT)
+        global root
+        self.log('Quitting')
+        root.quit()
         sys.exit()
 
     def disconnect(self):
-        self.log('DC')
+        self.log('Disconnecting')
+        self.running = False
         self.send_action(DISCONNECT)
 
     def log(self, msg, level=0):
@@ -149,32 +153,42 @@ class TTTServer(ActionServer):
 
     def turn(self, player):
         if player is self.current_player:
+            player.send_action(SET_TITLE, text='Your turn!')
+            player.send_action(SET_MSG, text='Click on a board position to take it')
             row, col = (self.input_row(player), self.input_col(player))  # TODO: Change
             while not (self.take(player, row, col)):
                 if not self.valid_pos(row, col):
-                    self.disp(player, 'That position is invalid')
+                    player.send_action(SET_MSG, text='That position is invalid')
                 elif self.board[row][col] == self.symbol[player]:
-                    self.disp(player, 'You already have that position!')
+                    player.send_action(SET_MSG, text='You already have that position!')
                 else:
-                    self.disp(player, 'That position has already been taken by player ' + self.board[row][col])  # TODO: Change
+                    player.send_action(SET_MSG, text='That position has already been taken by player ' + self.board[row][col])
+                    # self.update_player_board(player, 'That position has already been taken by player ' + self.board[row][col])  # TODO: Change
                 row, col = (self.input_row(player), self.input_col(player))
-            self.disp(player, 'You made a move on ' + str(row + 1) + ', ' + str(col + 1))
+            player.send_action(SET_MSG, text='You made a move on ' + str(row + 1) + ', ' + str(col + 1))
             self.turns.append((player, (row, col)))
             return row, col
+        player.send_action(SET_MSG, text='It\'s not your turn yet!')
         self.log_error(RuntimeWarning('Player ' + str(player) + ' attempted turn when not current player'))
 
-    def disp(self, player, string):  # TODO: Remove
-        player.display(string)
+    def update_player_board(self, player):  # TODO: Remove
+        player = TTTClientThread()  # TODO: REMOVE
+        for i in range(self.board_size):
+            for j in range(self.board_size):
+                player.send_action(SET_BOARD, player=self.board[i][j], row=i, col=j)
 
-    def disp_board(self, player):  # TODO: Remove
-        self.disp(player, self.__repr__())
+    def listen4client(self):
+        pass
 
-    def disp_all(self, string):  # TODO: Remove
-        for p in self.players:
-            self.disp(p, string)
-
-    def disp_all_board(self):  # TODO: Remove
-        self.disp_all(self.__repr__())
+    # def disp_board(self, player):  # TODO: Remove
+    #     self.update_player_board(player, self.__repr__())
+    #
+    # def disp_all(self, string):  # TODO: Remove
+    #     for p in self.players:
+    #         self.update_player_board(p, string)
+    #
+    # def disp_all_board(self):  # TODO: Remove
+    #     self.disp_all(self.__repr__())
 
     def check_win(self, player, row, col):
         '''
@@ -276,11 +290,16 @@ class TTTClientThread(ClientThread):
             QUIT: self.quit,
         }
 
+    def process_action(self, act_msg):
+        self.log('Processing action: ' + act_msg)
+        super().process_action(act_msg)
+
     def new_game(self):
         pass
 
     def move(self, row, col):
-        self.server.take(self, row, col)
+        if self.server.take(self, row, col):
+            self.send_action(SET_BOARD, row=row, col=col)
 
     def disconnect(self):
         pass
