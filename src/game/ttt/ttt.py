@@ -1,5 +1,6 @@
 import sys
 from threading import Thread
+import socket
 from time import sleep
 import string
 from random import shuffle
@@ -291,3 +292,32 @@ class TTTClientThread(ClientThread):
 
     def quit(self):
         pass  # TODO
+
+
+class MMServer(ActionServer):
+
+    def __init__(self, players, port=12000):
+        super().__init__(self, port, client_type=TTTClientThread)
+        self.players = players
+        self.clients = []
+
+    def listen4match(self):
+        listen_address = (socket.gethostname(), self.port)
+        self.socket.bind(listen_address)
+        self.socket.listen(self.backlog)
+        self.log('Listening on ' + str(listen_address))
+        while self.online:
+            try:
+                client_socket, client_address = self.socket.accept()
+                self.log('Accepted connection at ' + str(client_address))
+                client = self.client_type(server=self, socket=client_socket, address=client_address)
+                client.start()
+                self.clients.append(client)
+            except OSError:
+                self.log('Listening socket closed')
+            except Exception as e:
+                self.log_error(e)
+            if len(client) == len(self.players):
+                # make new game thread and pass in clients
+                self.clients.clear()
+
