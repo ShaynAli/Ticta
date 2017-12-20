@@ -1,6 +1,5 @@
 from threadsafe_tkinter import *
 import math
-import string
 from threading import Thread
 import random
 import sys
@@ -188,14 +187,14 @@ class TTTGUI:
         self.window_size = str(self.cell_size * 4)
 
         self.window = Tk()
-        self.top_label = Label(self.window, text="The SEXY Tic Tak Toe...", bg="#ffcccc", font=28)
-        self.message = Label(self.window, text="Message", bg="#ffcccc", font=28)
+        self.top_label = Label(self.window, text='The SEXY Tic Tak Toe...', bg='#ffcccc', font=28)
+        self.message = Label(self.window, text='Message', bg='#ffcccc', font=28)
 
         self.grid_frame = Frame(self.window)
 
-        self.button_start = Button(self.window, text="New game", fg="green")
-        self.button_disconnect = Button(self.window, text="Disconnect", fg="red")
-        self.button_quit = Button(self.window, text="Quit/Close", fg="red")
+        self.button_start = Button(self.window, text='New game', fg='green')
+        self.button_disconnect = Button(self.window, text='Disconnect', fg='red')
+        self.button_quit = Button(self.window, text='Quit/Close', fg='red')
 
         self.game_array = [[0 for x in range(self.rows)] for y in range(self.columns)]
         self.button_array = [[0 for x in range(self.rows)] for y in range(self.columns)]
@@ -214,7 +213,7 @@ class TTTGUI:
         self.window.minsize(int(self.window.winfo_width() * self.columns / 3),
                             int(self.window.winfo_height() * self.rows / 3))
 
-        self.window.config(background="#ffcccc")
+        self.window.config(background='#ffcccc')
 
         self.top_label.place(relx=0.5, rely=0.03, anchor=CENTER)
         self.message.place(relx=0.5, rely=0.07, anchor=CENTER)
@@ -223,22 +222,22 @@ class TTTGUI:
 
         for x in range(0, self.rows):
             for y in range(0, self.columns):
-                canvas = Canvas(self.grid_frame, width=self.cell_size, height=self.cell_size, bg="white", highlightcolor='#'+str(x)+str(y)+'0')
+                canvas = Canvas(self.grid_frame, width=self.cell_size, height=self.cell_size, bg='white', highlightcolor='#'+str(x)+str(y)+'0')
                 canvas.grid(row=x, column=y)
                 canvas.bind('<Button-1>', self.__move)
                 self.game_array[x][y] = canvas
 
                 # button = Button(self.game_array[x][y], width=int(self.cell_size / 7), height=int(self.cell_size / 15),
-                #                 text=str(x) + str(y), fg="white", disabledforeground="white", bg="white")
+                #                 text=str(x) + str(y), fg='white', disabledforeground='white', bg='white')
                 # button.bind('<Button-1>', self.__move)
                 # self.button_array[x][y] = button
 
-        self.button_start.bind("<Button-1>", self.initialize)
+        self.button_start.bind('<Button-1>', self.initialize)
         self.button_start.place(relx=0.5, rely=0.92, anchor=CENTER)
 
-        self.button_disconnect.bind("<Button-1>", self.__disconnect)
+        self.button_disconnect.bind('<Button-1>', self.__disconnect)
 
-        self.button_quit.bind("<Button-1>", self.__quit)
+        self.button_quit.bind('<Button-1>', self.__quit)
         self.button_quit.place(relx=0.5, rely=0.97, anchor=CENTER)
 
     def start(self):
@@ -251,7 +250,7 @@ class TTTGUI:
     def initialize(self, event):
         for x in range(0, self.rows):
             for y in range(0, self.columns):
-                self.game_array[x][y].delete("all")
+                self.game_array[x][y].delete('all')
         self.new_game()
 
     # def change_gui(self):
@@ -276,8 +275,8 @@ class TTTGUI:
         pass
 
     def __move(self, event):
-        x = (event.widget["highlightcolor"])[1]
-        y = (event.widget["highlightcolor"])[2]
+        x = (event.widget['highlightcolor'])[1]
+        y = (event.widget['highlightcolor'])[2]
 
         self.move(x, y)
 
@@ -316,9 +315,9 @@ class TTTGUI:
         self.message.config(text=text)
 
     # def draw(self, row, col, player):
-    #     if event.widget["state"] == NORMAL:
-    #         x = int(event.widget["text"][0])
-    #         y = int(event.widget["text"][1])
+    #     if event.widget['state'] == NORMAL:
+    #         x = int(event.widget['text'][0])
+    #         y = int(event.widget['text'][1])
     #
     #         event.widget.pack_forget()
     #         self.game_array[row][col].create_polygon(co_ordinates, fill=color)
