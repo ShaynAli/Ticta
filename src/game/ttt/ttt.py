@@ -1,10 +1,11 @@
 import sys
+from os.path import sep
 from threading import Thread
 from time import sleep
 import string
 from random import shuffle
 from itertools import cycle
-sys.path.append('..\..')
+sys.path.append('..' + sep + '..')
 from abstracts.action import ActionServer, ActionClient, ClientThread
 from presentation.interface import TTTGUI
 
