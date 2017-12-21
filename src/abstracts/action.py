@@ -52,10 +52,11 @@ class ActionSocket(Logger):
                     self.log('Completed action: ' + in_msg)
                 except(SyntaxError, TypeError, KeyError, ValueError) as e:
                     self.log('Received non-action message: ' + in_msg)
+
                 except Exception as e:
                     raise e
             else:
-                self.exit()
+                self.connected = False
             sleep(self.frequency)
         # Disconnect
         self.socket.close()
@@ -188,7 +189,7 @@ class ActionServer(Logger):
 
     client_no = (i for i in count())
 
-    def __init__(self, port, client_type=ClientThread, frequency=0.01, backlog=32, verbosity=0):
+    def __init__(self, port, client_type=ClientThread, frequency=0.01, backlog=32, verbosity=0, server_type=None):
         super().__init__(verbosity=verbosity)
         self.client_type = client_type
         self.output_free = True
@@ -197,11 +198,12 @@ class ActionServer(Logger):
         self.backlog = backlog
         self.socket = socket.socket()
         self.action_tree = {}
-        self.log('Starting server')
+        self.log('Starting server on port: ' + str(port) + ' IP: ' + str(socket.gethostbyname(socket.gethostname())))
         self.online = True
         self.console_thread = Thread(target=self.listen4console)
         self.listen_thread = Thread(target=self.listen4client)
         self.clients = set()
+        self.server_type = server_type
 
     def listen4console(self):
         while self.online:
@@ -241,17 +243,23 @@ class ActionServer(Logger):
         super().log_error(e, stack_trace=stack_trace)
 
     def listen4client(self):
-        listen_address = (socket.gethostname(), self.port)
+        listen_address = (socket.gethostbyname(socket.gethostname()), self.port)
+        listen_address = ('127.0.0.1', self.port)
         self.socket.bind(listen_address)
         self.socket.listen(self.backlog)
         self.log('Listening on ' + str(listen_address))
+        i = 0
         while self.online:
             try:
                 client_socket, client_address = self.socket.accept()
                 self.log('Accepted connection at ' + str(client_address))
-                client = self.client_type(server=self, socket=client_socket, address=client_address)
+                client = self.client_type(server=self, socket=client_socket, address=client_address, number=i)
                 client.start()
                 self.clients.add(client)
+                i += i
+                if len(self.clients) >= 2:
+                    self.server_type(self.clients)
+                    self.clients = set()
             except OSError:
                 self.log('Listening socket closed')
             except Exception as e:

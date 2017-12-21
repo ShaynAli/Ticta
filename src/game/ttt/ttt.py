@@ -3,12 +3,13 @@ from os.path import sep
 from threading import Thread
 from time import sleep
 import string
+import socket
 from random import shuffle
 from itertools import cycle
+from threading import Semaphore
 sys.path.append('..' + sep + '..')
 from abstracts.action import ActionServer, ActionClient, ClientThread
 from presentation.interface import TTTGUI
-
 
 NEW_GAME = 'new-game'
 MOVE = 'move'
@@ -20,6 +21,8 @@ SET_MSG = 'set-msg'
 SET_PLAYERS = 'set-players'
 SET_BOARD = 'set-board'
 
+PLAY = 'play'
+
 # PROMPT = 'prompt'
 # GET_ROW = 'get-row'
 # GET_COL = 'get-col'
@@ -30,11 +33,13 @@ class TTTClient(ActionClient, TTTGUI):
     def __init__(self):
         ActionClient.__init__(self)
         TTTGUI.__init__(self)
+
         self.action_tree = {
             SET_MSG: self.set_message,
             SET_TITLE: self.set_title,
             SET_PLAYERS: self.set_players,
             SET_BOARD: self.set_board,
+            PLAY: self.play,
         }
         self.running = False
         self.output_free = True
@@ -48,8 +53,8 @@ class TTTClient(ActionClient, TTTGUI):
         self.log('Playing')
         action_in_thread = Thread(target=self.listen4action)
         action_in_thread.start()
-        game_thread = Thread(target=self.game_loop)
-        game_thread.start()
+        # game_thread = Thread(target=self.game_loop)
+        # game_thread.start()
         self.run_gui()  # This call eats babies
 
     def game_loop(self):
@@ -97,19 +102,34 @@ class TTTServer(ActionServer):
     def max_players():
         return len(TTTServer.PLAYER_SYMBOLS)
 
-    def __init__(self, players, board_size=3, auto_restart=False, port=12000):
-        super().__init__(port, client_type=TTTClientThread)
-        if len(players) > TTTServer.max_players():
-            raise RuntimeError('Too many players, can have at most ' + str(TTTServer.max_players()))
+    def __init__(self, players=None, board_size=3, auto_restart=False, port=12000):
+        super().__init__(port, client_type=TTTClientThread, server_type=TTTServer)
         self.board_size = board_size
         self.board = self.new_board(self.board_size)
-        self.players = players
         symbols = list(TTTServer.PLAYER_SYMBOLS)
         shuffle(symbols)
-        self.symbol = {p: s for p, s in zip(self.players, symbols)}
+        self.symbol = {}
         self.turns = []
         self.auto_restart = auto_restart
-        self.current_player = None
+        self.row = None
+        self.col = None
+        self.finished = Semaphore(0)
+        self.start = Semaphore(1)
+        self.players = players
+        if players is not None:
+            if len(players) > TTTServer.max_players():
+                raise RuntimeError('Too many players, can have at most ' + str(TTTServer.max_players()))
+            self.current_player_number = None
+            self.current_player = None
+            for p in players:
+                p.server = self
+            self.players = players
+            self.game_thread = Thread(target=self.run_game)
+            self.game_thread.start()
+            self.symbol = {p: s for p, s in zip(self.players, symbols)}
+            for p in self.players:
+                p.send_action(SET_PLAYERS, players=str(list(self.symbol.keys())))
+                p.send_action(PLAY)
 
     def reinit(self, players=None, board_size=None, auto_restart=None):
         '''
@@ -137,8 +157,9 @@ class TTTServer(ActionServer):
         win, tie = False, False
         while not (win or tie):
             self.current_player = players.__next__()
-            self.disp_all_board()  # TODO: Remove
-            self.disp_all('Player ' + self.symbol[self.current_player] + '\'s turn')  # TODO: Change to set message
+            self.start.release()
+            # self.disp_all_board()  # TODO: Remove
+            # self.disp_all('Player ' + self.symbol[self.current_player] + '\'s turn')  # TODO: Change to set message
             win = self.check_win(self.current_player, *self.turn(self.current_player))
             tie = self.check_tie()
         if win:
@@ -156,30 +177,35 @@ class TTTServer(ActionServer):
         if player is self.current_player:
             player.send_action(SET_TITLE, text='Your turn!')
             player.send_action(SET_MSG, text='Click on a board position to take it')
-            row, col = (self.input_row(player), self.input_col(player))  # TODO: Change
-            while not (self.take(player, row, col)):
-                if not self.valid_pos(row, col):
-                    player.send_action(SET_MSG, text='That position is invalid')
-                elif self.board[row][col] == self.symbol[player]:
-                    player.send_action(SET_MSG, text='You already have that position!')
-                else:
-                    player.send_action(SET_MSG, text='That position has already been taken by player ' + self.board[row][col])
-                    # self.update_player_board(player, 'That position has already been taken by player ' + self.board[row][col])  # TODO: Change
-                row, col = (self.input_row(player), self.input_col(player))
+            self.finished.acquire()
+            row = self.row
+            col = self.col
+
+            # row, col = (self.input_row(player), self.input_col(player))  # TODO: Change
+            # while not (self.take(player, row, col)):
+            #     if not self.valid_pos(row, col):
+            #         player.send_action(SET_MSG, text='That position is invalid')
+            #     elif self.board[row][col] == self.symbol[player]:
+            #         player.send_action(SET_MSG, text='You already have that position!')
+            #     else:
+            #         player.send_action(SET_MSG, text='That position has already been taken by player ' + self.board[row][col])
+            #         # self.update_player_board(player, 'That position has already been taken by player ' + self.board[row][col])  # TODO: Change
+            #     row, col = (self.input_row(player), self.input_col(player))
             player.send_action(SET_MSG, text='You made a move on ' + str(row + 1) + ', ' + str(col + 1))
+            for p in self.players:
+                self.set_board(p, row, col)
             self.turns.append((player, (row, col)))
             return row, col
         player.send_action(SET_MSG, text='It\'s not your turn yet!')
         self.log_error(RuntimeWarning('Player ' + str(player) + ' attempted turn when not current player'))
 
-    def update_player_board(self, player):  # TODO: Remove
-        player = TTTClientThread()  # TODO: REMOVE
-        for i in range(self.board_size):
-            for j in range(self.board_size):
-                player.send_action(SET_BOARD, player=self.board[i][j], row=i, col=j)
+    def set_board(self, player, row, col):
+        player.send_action(SET_BOARD, player=self.board[row][col], row=row, col=col)
 
-    def listen4client(self):
-        pass
+    # def update_player_board(self, player):
+    #     for i in range(self.board_size):
+    #         for j in range(self.board_size):
+    #             player.send_action(SET_BOARD, player=self.board[i][j], row=i, col=j)
 
     # def disp_board(self, player):  # TODO: Remove
     #     self.update_player_board(player, self.__repr__())
@@ -249,9 +275,18 @@ class TTTServer(ActionServer):
         :return: Returns True if the position is taken and False is the move was invalid, i.e. the position was not on
             the board or the position was taken
         '''
+        if self.players is None:
+            return False
+        row = int(row)
+        col = int(col)
+        self.start.acquire()
         if player is self.current_player and self.takeable(row, col):
             self.board[row][col] = self.symbol[player]
+            self.row = row
+            self.col = col
+            self.finished.release()
             return True  # Success
+        self.start.release()
         return False  # Failure
 
     def win(self, player):
@@ -278,10 +313,32 @@ class TTTServer(ActionServer):
                                  'Please enter an integer from 1 to ' + str(self.n_cols()) +
                                  ' for the column number: ')) - 1
 
+    def listen4client(self):
+        listen_address = (socket.gethostname(), self.port)
+        self.socket.bind(listen_address)
+        self.socket.listen(self.backlog)
+        self.log('Listening on ' + str(listen_address))
+        i = 0
+        while self.online:
+            try:
+                client_socket, client_address = self.socket.accept()
+                self.log('Accepted connection at ' + str(client_address))
+                client = self.client_type(server=self, socket=client_socket, address=client_address, number=i)
+                client.start()
+                self.clients.add(client)
+                i += 1
+                if len(self.clients) >= 2:
+                    self.server_type(self.clients)
+                    self.clients = set()
+            except OSError:
+                self.log('Listening socket closed')
+            except Exception as e:
+                self.log_error(e)
+
 
 class TTTClientThread(ClientThread):
 
-    def __init__(self, server, socket, address, players, frequency=0.01, buffer_size=1024, verbosity=0):
+    def __init__(self, server, socket, address, number, players=[], frequency=0.01, buffer_size=1024, verbosity=0):
         ClientThread.__init__(self, server, socket, address,
                               frequency=frequency, buffer_size=buffer_size, verbosity=verbosity)
         self.action_tree = {  # TODO: Implement
@@ -290,6 +347,7 @@ class TTTClientThread(ClientThread):
             DISCONNECT: self.disconnect,
             QUIT: self.quit,
         }
+        self.number = number
 
     def process_action(self, act_msg):
         self.log('Processing action: ' + act_msg)
@@ -300,14 +358,14 @@ class TTTClientThread(ClientThread):
 
     def move(self, row, col):
         if self.server.take(self, row, col):
-            self.send_action(SET_BOARD, row=row, col=col)
+            self.send_action(SET_BOARD, row=row, col=col, player=self.server.symbol[self])
 
     def disconnect(self):
         pass
         # self.server.end_game('Player disconnected')  # TODO: Implement
 
-    def send_players(self, players):
-        self.send_action(SET_PLAYERS, players=players)
+    # def send_players(self, players):
+    #     self.send_action(SET_PLAYERS, players=players)
 
     def quit(self):
         pass  # TODO
