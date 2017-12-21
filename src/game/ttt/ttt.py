@@ -127,7 +127,7 @@ class TTTServer(ActionServer):
             self.game_thread.start()
             self.symbol = {p: s for p, s in zip(self.players, symbols)}
             for p in self.players:
-                p.send_action(SET_PLAYERS, players=str(list(self.symbol.keys())))
+                p.send_action(SET_PLAYERS, players=list(self.symbol.keys()))
                 p.send_action(PLAY)
 
     def reinit(self, players=None, board_size=None, auto_restart=None):

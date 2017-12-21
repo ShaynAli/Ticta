@@ -278,7 +278,7 @@ class TTTGUI:
         x = (event.widget['highlightcolor'])[1]
         y = (event.widget['highlightcolor'])[2]
 
-        self.move(x, y)
+        self.move(int(x), int(y))
 
     @abstractmethod
     def move(self, row, col):
