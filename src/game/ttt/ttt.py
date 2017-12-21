@@ -101,7 +101,7 @@ class TTTServer(ActionServer):
     def max_players():
         return len(TTTServer.PLAYER_SYMBOLS)
 
-    def __init__(self, players=None, board_size=3, auto_restart=False, port=12000):
+    def __init__(self, players=None, board_size=3, auto_restart=False, port=12000, master_server = None):
         super().__init__(port, client_type=TTTClientThread, server_type=TTTServer)
         self.board_size = board_size
         self.board = self.new_board(self.board_size)
@@ -115,6 +115,7 @@ class TTTServer(ActionServer):
         self.finished = Semaphore(0)
         self.start = Semaphore(1)
         self.players = players
+        self.master_server = master_server
         if players is not None:
             if len(players) > TTTServer.max_players():
                 raise RuntimeError('Too many players, can have at most ' + str(TTTServer.max_players()))
@@ -242,6 +243,7 @@ class TTTServer(ActionServer):
         return all([self.board[i][col] == self.symbol[player] for i in range(self.n_rows())])
 
     def check_tie(self):
+        print(str(len(self.turns))+str(self.board_size**2))
         return len(self.turns) >= self.board_size**2  # Fewer turns have been played than the numbers of positions
 
     def n_rows(self):
@@ -289,10 +291,23 @@ class TTTServer(ActionServer):
         return False  # Failure
 
     def win(self, player):
-        self.disp_all('Player ' + self.symbol[player] + ' wins!')  # TODO: Change
+        sleep(0.1)
+        for p in self.players:
+            if p == self.current_player:
+                msg = 'win'
+            else:
+                msg = 'loss'
+            p.send_action(SET_TITLE, text=msg)
+            p.send_action(SET_MSG, text='Player ' + self.symbol[player] + ' wins!')
+
+
 
     def tie(self):
-        self.disp_all('Tie game.py!')  # TODO: Change
+        sleep(0.1)
+        for p in self.players:
+            p.send_action(SET_TITLE, text='Draw')
+            p.send_action(SET_MSG, text="It's a tie!")
+
 
     def restart(self):
         self.disp_all('Restarting...')
@@ -327,7 +342,7 @@ class TTTServer(ActionServer):
                 self.clients.add(client)
                 i += 1
                 if len(self.clients) >= 2:
-                    self.server_type(self.clients)
+                    self.server_type(self.clients, master_server=self)
                     self.clients = set()
             except OSError:
                 self.log('Listening socket closed')
