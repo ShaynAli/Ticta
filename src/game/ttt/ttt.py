@@ -27,7 +27,6 @@ PLAY = 'play'
 # GET_ROW = 'get-row'
 # GET_COL = 'get-col'
 
-
 class TTTClient(ActionClient, TTTGUI):
 
     def __init__(self):
@@ -176,6 +175,7 @@ class TTTServer(ActionServer):
     def turn(self, player):
         if player is self.current_player:
             player.send_action(SET_TITLE, text='Your turn!')
+            sleep(0.05)
             player.send_action(SET_MSG, text='Click on a board position to take it')
             self.finished.acquire()
             row = self.row
@@ -193,6 +193,8 @@ class TTTServer(ActionServer):
             #     row, col = (self.input_row(player), self.input_col(player))
             player.send_action(SET_MSG, text='You made a move on ' + str(row + 1) + ', ' + str(col + 1))
             for p in self.players:
+                p.send_action(SET_TITLE, text='Waiting')
+                sleep(0.05)
                 self.set_board(p, row, col)
             self.turns.append((player, (row, col)))
             return row, col
@@ -243,7 +245,6 @@ class TTTServer(ActionServer):
         return all([self.board[i][col] == self.symbol[player] for i in range(self.n_rows())])
 
     def check_tie(self):
-        print(str(len(self.turns))+str(self.board_size**2))
         return len(self.turns) >= self.board_size**2  # Fewer turns have been played than the numbers of positions
 
     def n_rows(self):
@@ -296,9 +297,9 @@ class TTTServer(ActionServer):
             if p == self.current_player:
                 msg = 'win'
             else:
-                msg = 'loss'
+                msg = 'lose'
             p.send_action(SET_TITLE, text=msg)
-            p.send_action(SET_MSG, text='Player ' + self.symbol[player] + ' wins!')
+            p.send_action(SET_MSG, text='You ' + msg+ '!')
 
 
 
