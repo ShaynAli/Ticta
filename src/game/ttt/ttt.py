@@ -33,7 +33,6 @@ class TTTClient(ActionClient, TTTGUI):
     def __init__(self):
         ActionClient.__init__(self)
         TTTGUI.__init__(self)
-
         self.action_tree = {
             SET_MSG: self.set_message,
             SET_TITLE: self.set_title,
@@ -323,7 +322,7 @@ class TTTServer(ActionServer):
             try:
                 client_socket, client_address = self.socket.accept()
                 self.log('Accepted connection at ' + str(client_address))
-                client = self.client_type(server=self, socket=client_socket, address=client_address, number=i)
+                client = self.client_type(server=self, socket=client_socket, address=client_address)
                 client.start()
                 self.clients.add(client)
                 i += 1
@@ -338,7 +337,7 @@ class TTTServer(ActionServer):
 
 class TTTClientThread(ClientThread):
 
-    def __init__(self, server, socket, address, number, players=[], frequency=0.01, buffer_size=1024, verbosity=0):
+    def __init__(self, server, socket, address, players=[], frequency=0.01, buffer_size=1024, verbosity=0):
         ClientThread.__init__(self, server, socket, address,
                               frequency=frequency, buffer_size=buffer_size, verbosity=verbosity)
         self.action_tree = {  # TODO: Implement
@@ -347,7 +346,6 @@ class TTTClientThread(ClientThread):
             DISCONNECT: self.disconnect,
             QUIT: self.quit,
         }
-        self.number = number
 
     def process_action(self, act_msg):
         self.log('Processing action: ' + act_msg)

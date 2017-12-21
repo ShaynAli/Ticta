@@ -38,6 +38,7 @@ class ActionSocket(Logger):
         self.frequency = frequency
         self.buffer_size = buffer_size
         self.connected = False
+        self.socket_free = True
         self.action_tree = {}
 
     # Client management
@@ -92,11 +93,15 @@ class ActionSocket(Logger):
     def send(self, msg):
         if not msg:  # Don't send empty messages
             return
+        while not self.socket_free:
+            sleep(self.frequency)
+        self.socket_free = False
         try:
             self.socket.send(msg.encode())
         except Exception as e:
             self.log('Unable to send')
             self.log_error(e, stack_trace=False)
+        self.socket_free = True
 
     def receive(self):
         try:
@@ -189,7 +194,7 @@ class ActionServer(Logger):
 
     client_no = (i for i in count())
 
-    def __init__(self, port, client_type=ClientThread, frequency=0.01, backlog=32, verbosity=0, server_type=None):
+    def __init__(self, port, client_type=ClientThread, server_type=ActionServer, frequency=0.01, backlog=32, verbosity=0):
         super().__init__(verbosity=verbosity)
         self.client_type = client_type
         self.output_free = True
@@ -243,20 +248,17 @@ class ActionServer(Logger):
         super().log_error(e, stack_trace=stack_trace)
 
     def listen4client(self):
-        listen_address = (socket.gethostbyname(socket.gethostname()), self.port)
-        listen_address = ('127.0.0.1', self.port)
+        listen_address = (socket.gethostname(), self.port)
         self.socket.bind(listen_address)
         self.socket.listen(self.backlog)
         self.log('Listening on ' + str(listen_address))
-        i = 0
         while self.online:
             try:
                 client_socket, client_address = self.socket.accept()
                 self.log('Accepted connection at ' + str(client_address))
-                client = self.client_type(server=self, socket=client_socket, address=client_address, number=i)
+                client = self.client_type(server=self, socket=client_socket, address=client_address)
                 client.start()
                 self.clients.add(client)
-                i += i
                 if len(self.clients) >= 2:
                     self.server_type(self.clients)
                     self.clients = set()
