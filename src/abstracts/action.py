@@ -95,7 +95,7 @@ class ActionSocket(Logger):
             return
         while not self.socket_free:
             sleep(self.frequency)
-        sleep(self.frequency)
+        sleep(1)
         self.socket_free = False
         try:
             self.socket.send(msg.encode())
