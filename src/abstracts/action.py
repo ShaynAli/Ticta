@@ -194,7 +194,7 @@ class ActionServer(Logger):
 
     client_no = (i for i in count())
 
-    def __init__(self, port, client_type=ClientThread, server_type=ActionServer, frequency=0.01, backlog=32, verbosity=0):
+    def __init__(self, port, client_type=ClientThread, server_type=None, frequency=0.01, backlog=32, verbosity=0):
         super().__init__(verbosity=verbosity)
         self.client_type = client_type
         self.output_free = True
@@ -208,7 +208,7 @@ class ActionServer(Logger):
         self.console_thread = Thread(target=self.listen4console)
         self.listen_thread = Thread(target=self.listen4client)
         self.clients = set()
-        self.server_type = server_type
+        self.server_type = server_type if server_type is not None else ActionServer
 
     def listen4console(self):
         while self.online:
