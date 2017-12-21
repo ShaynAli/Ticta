@@ -32,7 +32,7 @@ class Logger:
 
 class ActionSocket(Logger):
 
-    def __init__(self, frequency=0.01, buffer_size=1024, verbosity=0):
+    def __init__(self, frequency=0.1, buffer_size=1024, verbosity=0):
         super().__init__(verbosity=verbosity)
         self.socket = socket.socket()
         self.frequency = frequency
@@ -95,7 +95,7 @@ class ActionSocket(Logger):
             return
         while not self.socket_free:
             sleep(self.frequency)
-        sleep(1)
+        sleep(self.frequency)
         self.socket_free = False
         try:
             self.socket.send(msg.encode())
@@ -115,7 +115,7 @@ class ActionSocket(Logger):
 class ActionClient(ActionSocket):
     ''' Instances of Client should be run only on a client's machine and are not a part of the server '''
 
-    def __init__(self, frequency=0.01, buffer_size=1024, verbosity=0):
+    def __init__(self, frequency=0.1, buffer_size=1024, verbosity=0):
         super().__init__(frequency=frequency, buffer_size=buffer_size, verbosity=verbosity)
         self.action_tree = {
             OPTIONS: self.send_options,
@@ -195,7 +195,7 @@ class ActionServer(Logger):
 
     client_no = (i for i in count())
 
-    def __init__(self, port, client_type=ClientThread, server_type=None, frequency=0.01, backlog=32, verbosity=0):
+    def __init__(self, port, client_type=ClientThread, server_type=None, frequency=0.1, backlog=32, verbosity=0):
         super().__init__(verbosity=verbosity)
         self.client_type = client_type
         self.output_free = True
