@@ -6,7 +6,6 @@ from time import sleep
 from ast import literal_eval
 from traceback import format_exception_only
 from abc import abstractmethod
-from subprocess import Popen, CREATE_NEW_CONSOLE
 
 OPTIONS = 'options'
 REPLY = 'reply'
