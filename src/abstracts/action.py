@@ -1,4 +1,5 @@
 ''' server.py - Deals with a game server '''
+import sys
 import socket
 from threading import Thread
 from itertools import count
@@ -59,6 +60,7 @@ class ActionSocket(Logger):
                 self.connected = False
             sleep(self.frequency)
         # Disconnect
+        self.log('Disconnected')
         self.socket.close()
 
     # Action management
@@ -236,6 +238,9 @@ class ActionServer(Logger):
             c.socket.close()
             self.log('Disconnected client ' + str(c.thread_no))
         self.socket.close()
+        self.log('Exiting')
+        sleep(3)
+        sys.exit(0)
 
     def log(self, msg, level=0):
         while not self.output_free:

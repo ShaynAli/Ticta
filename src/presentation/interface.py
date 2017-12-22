@@ -169,6 +169,8 @@ def colors_gen(num_colors):
 #
 #         return shape, color
 
+global root
+
 
 class TTTGUI:
 
@@ -186,9 +188,11 @@ class TTTGUI:
 
         self.window_size = str(self.cell_size * 4)
 
+
         self.window = Tk()
-        self.top_label = Label(self.window, text='The SEXY Tic Tak Toe...', bg='#ffcccc', font=28)
-        self.message = Label(self.window, text='Message', bg='#ffcccc', font=28)
+        root = self.window
+        self.top_label = Label(self.window, text='Welcome to Tic Tac Toe!', bg='#f0f0f0', font=28)
+        self.message = Label(self.window, text='Waiting for more players to connect before beginning game...', bg='#f0f0f0', font=28)
 
         self.grid_frame = Frame(self.window)
 
@@ -213,7 +217,7 @@ class TTTGUI:
         self.window.minsize(int(self.window.winfo_width() * self.columns / 3),
                             int(self.window.winfo_height() * self.rows / 3))
 
-        self.window.config(background='#ffcccc')
+        self.window.config(background='#1f1f1f')
 
         self.top_label.place(relx=0.5, rely=0.03, anchor=CENTER)
         self.message.place(relx=0.5, rely=0.07, anchor=CENTER)
