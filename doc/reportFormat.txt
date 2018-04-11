@@ -1,0 +1,6 @@
+1. Provided some background of the game. Explain the game design briefly in introduction,
+fix executive summary
+2.explain the code in the body section (methods)
+3. results: self-explanatory, play the game
+4. conclusion, recommendation: explain the lessons learnt from the project
+5. Appendix, add the screenshots of the game.
